@@ -88,7 +88,7 @@ export default (rootName, disable) => {
 				special = true;
 				break;
 			default:
-				mode = advanced ? 'log' : 'Navy';
+				mode = advanced ? 'log' : 'Purple';
 		}
 
 		let logger = advanced ? fn[mode] : fn['log'];

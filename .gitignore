@@ -8,6 +8,7 @@
 # testing
 /coverage
 /src/scripts/utils/keys.js
+/src/assets
 
 # production
 /build
