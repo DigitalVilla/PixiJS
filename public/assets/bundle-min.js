@@ -45871,24 +45871,22 @@ if (content.locals) {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/lib/pixi.es.js");
-/* harmony import */ var _utils_logger__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/logger */ "./src/scripts/utils/logger.js");
-/* harmony import */ var _sass_main_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../sass/main.scss */ "./src/sass/main.scss");
-/* harmony import */ var _sass_main_scss__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_sass_main_scss__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils_FN__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils/FN */ "./src/scripts/utils/FN.js");
+/* harmony import */ var _utils_logger__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/logger */ "./src/scripts/utils/logger.js");
+/* harmony import */ var _sass_main_scss__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../sass/main.scss */ "./src/sass/main.scss");
+/* harmony import */ var _sass_main_scss__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_sass_main_scss__WEBPACK_IMPORTED_MODULE_3__);
 
 
 
-var log = Object(_utils_logger__WEBPACK_IMPORTED_MODULE_1__["default"])('PixiJS: '); //Docs
+
+var FN = new _utils_FN__WEBPACK_IMPORTED_MODULE_1__["default"](pixi_js__WEBPACK_IMPORTED_MODULE_0__);
+var log = Object(_utils_logger__WEBPACK_IMPORTED_MODULE_2__["default"])('PixiJS: '); //Docs
 // http://pixijs.download/release/docs/PIXI.htm
-// game loop renderer
-// https://github.com/pixijs/pixi.js/wiki/v5-Custom-Application-GameLoop
-// var app = new PIXI.Application({ width: 800, height: 600, backgroundColor: 0x001144 });
-// document.body.appendChild(app.view);
 // Aliases
 
 var Container = pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"],
     autoRender = pixi_js__WEBPACK_IMPORTED_MODULE_0__["autoDetectRenderer"],
     Loader = pixi_js__WEBPACK_IMPORTED_MODULE_0__["Loader"],
-    Sprite = pixi_js__WEBPACK_IMPORTED_MODULE_0__["Sprite"],
     scene = document.getElementById('scene'); //Create a container object called the `stage`
 
 var stage = new Container(); //Create the renderer
@@ -45900,45 +45898,27 @@ var renderer = autoRender({
 }); //Add the canvas to the HTML document
 
 scene.appendChild(renderer.view); //customize
-// renderer.resize(1080, 512);
 ///SPRITES
 
 var loader = new Loader();
 var sprites = {};
-/*  throughout the process multiple signals can be dispatched.
-    loader.onProgress.add(() => {}); // called once per loaded/errored file
-    loader.onError.add(() => {}); // called once per errored file
-    loader.onLoad.add(() => {}); // called once per loaded file
-    loader.onComplete.add(() => {}); // called once when the queued resources all load.
-*/
-
-loader.add('kid', "assets/explorer.png").add('cat', "assets/cat64x64.png").add('boar', "assets/boar.gif");
+loader.add('tileSet', "assets/girl.png");
 loader.load(function (loader, resources) {
-  log('loader'); //Create the sprite from the texture
-  // sprites.cat = new PIXI.TilingSprite(resources.cat.texture); //tiles
+  log(['loader', resources]);
+  var frame = FN.frame(resources.tileSet, 99, 74);
+  sprites.girl = frame(0, 3); //Position the sprite on the canvas
 
-  sprites.cat = new Sprite(resources.cat.texture); // sprites
-
-  sprites.kid = new Sprite(resources.kid.texture); // sprites
-
-  sprites.kid = new Sprite(resources.boar.texture); // sprites
-  //Add the sprite to the stage
-  // sprites.cat.x = 400; sprites.cat.y = 100;
-
-  sprites.boar.position.set(400, 60);
+  sprites.girl.x = 64;
+  sprites.girl.y = 64;
 });
 loader.onComplete.add(function () {
   log('onComplete'); //Add the sprite to the stage
 
-  stage.addChild(sprites.cat);
-  stage.addChild(sprites.kid);
-  stage.addChild(sprites.boar); // stage.removeChild(sprites.cat); // remove
-  // sprites.cat.visible = false;; // hide - best!!
-  // sprites.cat.destroy(true, true); // extreme -> frees GPU
-  //Update renderer
+  stage.addChild(sprites.girl); //Render the stage
 
   renderer.render(stage);
 }); //Tell the `renderer` to `render` the `stage`
+// renderer.resize(1080, 512);
 
 renderer.render(stage); //responsive directives
 
@@ -45946,6 +45926,59 @@ renderer.view.style.position = "absolute";
 renderer.view.style.width = "100vw";
 renderer.view.style.height = "100vh";
 renderer.view.style.display = "block";
+
+/***/ }),
+
+/***/ "./src/scripts/utils/FN.js":
+/*!*********************************!*\
+  !*** ./src/scripts/utils/FN.js ***!
+  \*********************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return FN; });
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+var FN =
+/*#__PURE__*/
+function () {
+  function FN(PIXI, options) {
+    _classCallCheck(this, FN);
+
+    this.PIXI = PIXI;
+    this.frame = this.frame.bind(this);
+  }
+
+  _createClass(FN, [{
+    key: "frame",
+    value: function frame(source, width, height) {
+      var _this = this;
+
+      //Create the `tileset` sprite from the texture
+      var texture = source.texture;
+      return function (xIndex, yIndex) {
+        var x = xIndex * width;
+        var y = yIndex * height; //size of the sub-image you want to extract from the texture
+
+        var rectangle = new _this.PIXI.Rectangle(x, y, width, height); //Tell the texture to use that rectangular section
+
+        texture.frame = rectangle; //Return the sprite from the texture
+
+        return new _this.PIXI.Sprite(texture);
+      };
+    }
+  }]);
+
+  return FN;
+}();
+
+
 
 /***/ }),
 
