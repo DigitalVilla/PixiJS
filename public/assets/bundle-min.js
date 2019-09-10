@@ -37770,7 +37770,7 @@ function deprecation(version, message, ignoreDepth)
 
 exports = module.exports = __webpack_require__(/*! ../../node_modules/css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js")(false);
 // Module
-exports.push([module.i, "*,\n::after,\n::before {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n  outline: none; }\n\nhtml {\n  font-size: 62.5%;\n  max-width: 100vw;\n  min-width: 320px;\n  overflow: hidden; }\n\nbody {\n  color: #222222;\n  background: #000;\n  font: normal 125% / 1.4 'sans-serif';\n  line-height: 1.6;\n  font-size: 1.6rem;\n  padding: 1rem;\n  padding: 0; }\n", ""]);
+exports.push([module.i, "*,\n::after,\n::before {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n  outline: none; }\n\nhtml {\n  font-size: 62.5%;\n  max-width: 100vw;\n  min-width: 320px;\n  overflow: hidden; }\n\nbody {\n  color: #ffffff;\n  background: #000;\n  font: normal 125% / 1.4 sans-serif;\n  line-height: 1.6;\n  font-size: 1.6rem;\n  padding: 1rem;\n  padding: 0; }\n\n#testLog {\n  position: absolute;\n  font-weight: 100;\n  bottom: 10px;\n  left: 60%;\n  font-size: 12px; }\n", ""]);
 
 
 /***/ }),
@@ -45893,7 +45893,7 @@ var stage = new Container(); //Create the renderer
 
 var renderer = autoRender({
   width: 600,
-  height: 200,
+  height: 600,
   backgroundColor: 0x223344
 }); //Add the canvas to the HTML document
 
@@ -45902,30 +45902,60 @@ scene.appendChild(renderer.view); //customize
 
 var loader = new Loader();
 var sprites = {};
-loader.add('tileSet', "assets/girl.png");
+var girl = {};
+loader.add('girlAtlas', "assets/girlAtlas.json");
 loader.load(function (loader, resources) {
-  log(['loader', resources]);
-  var frame = FN.frame(resources.tileSet, 99, 74);
-  sprites.girl = frame(0, 3); //Position the sprite on the canvas
-
-  sprites.girl.x = 64;
-  sprites.girl.y = 64;
+  log('loader', 5, true);
+  sprites.Girl = {};
+  girl = sprites.Girl.Walk = FN.frameBatch({
+    textures: resources.girlAtlas.textures,
+    batchName: 'Walk',
+    batch: {
+      textureKey: 'girl_',
+      selection: [6, 11]
+    }
+  });
+  var centerY = renderer.height / 2 - girl.walk_0.height / 2;
+  girl.walk_0.position.set(0, centerY);
 });
 loader.onComplete.add(function () {
-  log('onComplete'); //Add the sprite to the stage
+  log('onComplete');
+  stage.addChild(girl.walk_0); // gameLoop();
 
-  stage.addChild(sprites.girl); //Render the stage
+  FN.startAnimation(4, updateScene);
+  renderer.render(stage);
+  setTimeout(function () {
+    FN.stopAnimation();
+  }, 3000);
+  setTimeout(function () {
+    FN.startAnimation(4, updateScene);
+  }, 6000);
+});
+
+function updateScene() {
+  //Move the sprite 1 pixel per frame
+  girl.walk_0.x += 4; //Render the stage
 
   renderer.render(stage);
-}); //Tell the `renderer` to `render` the `stage`
-// renderer.resize(1080, 512);
+}
+
+function gameLoop() {
+  // velocity
+  girl.vx = 0;
+  girl.vy = 0; //Loop this function 60 times per second
+
+  requestAnimationFrame(gameLoop);
+  updateScene();
+} //Call the `gameLoop` function once to get it started
+//Tell the `renderer` to `render` the `stage`
+
 
 renderer.render(stage); //responsive directives
 
 renderer.view.style.position = "absolute";
-renderer.view.style.width = "100vw";
-renderer.view.style.height = "100vh";
-renderer.view.style.display = "block";
+renderer.view.style.top = "20%";
+renderer.view.style.left = "50%";
+renderer.view.style.transform = "translate(-50%,0)";
 
 /***/ }),
 
@@ -45939,39 +45969,207 @@ renderer.view.style.display = "block";
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return FN; });
+/* harmony import */ var _logger__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./logger */ "./src/scripts/utils/logger.js");
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
+
+var log = Object(_logger__WEBPACK_IMPORTED_MODULE_0__["default"])('FN: ');
+
 var FN =
 /*#__PURE__*/
 function () {
-  function FN(PIXI, options) {
+  function FN(PIXI) {
     _classCallCheck(this, FN);
 
+    log('constructor():', 2);
     this.PIXI = PIXI;
-    this.frame = this.frame.bind(this);
+    this.animation = {
+      testLog: document.getElementById('testLog'),
+      testFrame: true,
+      frameCount: 0
+    };
+    this.singleFrame = this.singleFrame.bind(this);
+    this.textureAtlas = this.textureAtlas.bind(this);
+    this.frameBatch = this.frameBatch.bind(this);
+    this.startAnimation = this.startAnimation.bind(this);
+    this.stopAnimation = this.stopAnimation.bind(this);
+    this.animate = this.animate.bind(this);
   }
 
   _createClass(FN, [{
-    key: "frame",
-    value: function frame(source, width, height) {
-      var _this = this;
+    key: "singleFrame",
+    value: function singleFrame(texture, tileWidth, tileHeight, xIndex, yIndex) {
+      log('singleFrame():', 2);
+      var x = xIndex * tileWidth;
+      var y = yIndex * tileHeight; //size of the sub-image you want to extract from the texture
 
-      //Create the `tileset` sprite from the texture
-      var texture = source.texture;
-      return function (xIndex, yIndex) {
-        var x = xIndex * width;
-        var y = yIndex * height; //size of the sub-image you want to extract from the texture
+      var rectangle = new this.PIXI.Rectangle(x, y, tileWidth, tileHeight); //Tell the texture to use that rectangular section
 
-        var rectangle = new _this.PIXI.Rectangle(x, y, width, height); //Tell the texture to use that rectangular section
+      texture.frame = rectangle; //Return the sprite from the texture
 
-        texture.frame = rectangle; //Return the sprite from the texture
+      return new this.PIXI.Sprite(texture);
+    }
+  }, {
+    key: "frameBatch",
+    value: function frameBatch(options) {
+      log('frameBatch():', 2);
+      var textures = options.textures; // Name of this new batch
 
-        return new _this.PIXI.Sprite(texture);
+      var batchName = options.batchName || 'batchImage'; // Get a selection of items
+
+      var batch = options.batch;
+      var prefix = batch && batch.textureKey; // Get unordered items
+
+      var list = batch && batch.list; // Get order items
+
+      var selection = batch && batch.selection; // batch container
+
+      var sprites = {};
+      sprites[batchName] = {};
+
+      if (batch) {
+        if (prefix && list && list.length) {
+          for (var i = 0, len = list.length; i < len; i++) {
+            var key = "".concat(prefix).concat(list[i]);
+
+            if (textures.hasOwnProperty(key)) {
+              var batchKey = "".concat(batchName.toLowerCase(), "_").concat(i);
+              sprites[batchName][batchKey] = new this.PIXI.Sprite(textures[key]);
+            }
+          }
+        } else if (prefix && selection && selection.length == 2) {
+          var count = 0;
+
+          for (var _i = selection[0], _len = selection[1]; _i <= _len; _i++) {
+            var _key = "".concat(prefix).concat(_i);
+
+            if (textures.hasOwnProperty(_key)) {
+              var _batchKey = "".concat(batchName.toLowerCase(), "_").concat(count++);
+
+              sprites[batchName][_batchKey] = new this.PIXI.Sprite(textures[_key]);
+            }
+          }
+        }
+      } else {
+        for (var _key2 in textures) {
+          if (textures.hasOwnProperty(_key2)) {
+            sprites[batchName][_key2] = new this.PIXI.Sprite(textures[_key2]);
+          }
+        }
+      }
+
+      return sprites[batchName];
+    }
+  }, {
+    key: "textureAtlas",
+    value: function textureAtlas(prefix, mapWidth, mapHeight, countX, countY, totalCount) {
+      log('textureAtlas():', 2);
+      var tileW = mapWidth / countX;
+      var tileY = mapHeight / countY;
+      totalCount = totalCount || countX * countY;
+      var atlas = {};
+      atlas.frames = {};
+      var count = 0;
+
+      for (var y = 0; y < countY; y++) {
+        for (var x = 0; x < countX; x++) {
+          if (count === totalCount) break;
+          atlas.frames["".concat(prefix, "_").concat(count)] = {
+            frame: {
+              x: x * tileW,
+              y: y * tileY,
+              w: tileW,
+              h: tileY
+            },
+            rotate: false,
+            trimmed: false,
+            spriteSourceSize: {
+              x: 0,
+              y: 0,
+              w: tileW,
+              h: tileY
+            },
+            sourceSize: {
+              w: tileW,
+              h: tileY
+            },
+            pivot: {
+              x: 0.5,
+              y: 0.5
+            }
+          };
+          count++;
+        }
+      }
+
+      atlas.meta = {
+        app: "http://www.DigitalVilla.com",
+        version: "1.0",
+        image: prefix + ".png",
+        format: "RGBA8888",
+        size: {
+          "w": mapWidth,
+          "h": mapHeight
+        },
+        scale: "1"
       };
+      return atlas;
+    }
+  }, {
+    key: "stopAnimation",
+    value: function stopAnimation() {
+      this.animation.stop = true;
+    }
+  }, {
+    key: "startAnimation",
+    value: function startAnimation(fps, callback) {
+      this.animation.callback = callback;
+      this.animation.stop = false;
+      this.animation.fps = fps;
+      this.animation.fpsInterval = 1000 / fps;
+      this.animation.then = Date.now();
+      this.animation.startTime = this.animation.then;
+      log(['startAnimating(): startTime', this.animation.startTime]);
+      this.animate();
+    }
+  }, {
+    key: "animate",
+    value: function animate() {
+      log('animate', 3, true);
+      var _this$animation = this.animation,
+          fpsInterval = _this$animation.fpsInterval,
+          startTime = _this$animation.startTime,
+          now = _this$animation.now,
+          then = _this$animation.then,
+          elapsed = _this$animation.elapsed,
+          stop = _this$animation.stop,
+          testFrame = _this$animation.testFrame,
+          testLog = _this$animation.testLog;
+      if (stop) return; // request another frame
+
+      requestAnimationFrame(this.animate); // calc elapsed time since last loop
+
+      this.animation.now = Date.now();
+      this.animation.elapsed = now - then; // if enough time has elapsed, draw the next frame
+
+      if (elapsed > fpsInterval) {
+        // Get ready for next frame by setting then=now, but...
+        // Also, adjust for fpsInterval not being multiple of 16.67
+        this.animation.then = now - elapsed % fpsInterval; // draw stuff here
+
+        this.animation.callback();
+
+        if (testFrame) {
+          // TESTING...Report #seconds since start and achieved fps.
+          var sinceStart = now - startTime;
+          var currentFps = Math.round(1000 / (sinceStart / ++this.animation.frameCount) * 100) / 100;
+          testLog.innerText = "Elapsed time: " + Math.round(sinceStart / 1000 * 100) / 100 + " secs @ " + currentFps + " fps.";
+        }
+      }
     }
   }]);
 
