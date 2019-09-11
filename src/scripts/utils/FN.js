@@ -1,8 +1,19 @@
 import logger from "./logger";
 let log = logger('Animate: ');
+
+var args = [
+	("\n %c %c %c Animate " + 1.2 + " - ✰ " + 'Omar Villanueva' + " ✰  %c  %c  http://www.DigitalVilla.co/  %cs \n\n"),
+	'background: #0066a5; padding:5px 0;',
+	'background: #0066a5; padding:5px 0;',
+	'color: #55c3dc; background: #030307; padding:5px 0;',
+	'background: #0066a5; padding:5px 0;',
+	'background: #aaaabf; padding:5px 0;',
+	'background: #0066a5; padding:5px 0;'];
+
+
 export default class Animate {
 	constructor(options) {
-		log('constructor():', 2);
+		console.log.apply(console, args);
 		this.stage = options.stage;
 		this.engine = options.engine;
 		this.renderer = options.renderer;
@@ -13,13 +24,7 @@ export default class Animate {
 			properties: {}
 		};
 
-		this.singleFrame = this.singleFrame.bind(this);
-		this.textureAtlas = this.textureAtlas.bind(this);
-		this.frameBatch = this.frameBatch.bind(this);
-		this.startAnimation = this.startAnimation.bind(this);
-		this.pauseAnimation = this.pauseAnimation.bind(this);
 		this.animate = this.animate.bind(this);
-		this.randomInt = this.randomInt.bind(this);
 	}
 
 	randomInt(min, max) {
@@ -130,38 +135,33 @@ export default class Animate {
 		return atlas;
 	}
 
-
 	pauseAnimation() {
 		this.animation.pause = true;
 	}
 
 	startAnimation(options) {
+		let start = performance.timing.navigationStart + performance.now();
 		this.animation.fpsInterval = 1000 / options.fps;
 		this.animation.update = options.update;
 		this.animation.fps = options.fps;
 		this.animation.lag = 0;
 		this.animation.pause = false;
-		this.animation.then = Date.now();
 		this.animation.interpolate = true;
-		this.animation.startTime = this.animation.then;
+		this.animation.startTime = start;
 		this.animation.properties.position = true;
 		this.animation.properties.rotation = true;
 		this.animation.properties.alpha = true;
 		this.animation.properties.scale = true;
 		this.animation.properties.size = true;
 		this.animation.properties.tile = true;
-
-
-		log(['startAnimating(): startTime', this.animation.startTime]);
 		this.animate();
+		log(`startAnimation(): fps: ${options.fps} duration: ${1000 / options.fps}ms`, 5, true);
 	}
-
 
 	animate() {
 		requestAnimationFrame(this.animate);
 		if (!this.animation.pause) {
 			// log('ANIMATE', 3, true)
-
 			//If the `fps` hasn't been defined, call the user-defined update
 			//function and render the sprites at the maximum rate the
 			//system is capable of
@@ -182,7 +182,7 @@ export default class Animate {
 	//of
 	interpolate() {
 		//Calculate the time that has elapsed since the last frame
-		let current = performance.timing.navigationStart+performance.now(), //Date.now()
+		let current = performance.timing.navigationStart + performance.now(), //Date.now()
 			elapsed = current - this.animation.startTime;
 
 		//Catch any unexpectedly large frame rate spikes
@@ -197,7 +197,6 @@ export default class Animate {
 		//Update the frame if the lag counter is greater than or
 		//equal to the frame duration
 		while (this.animation.lag >= this.animation.fpsInterval) {
-
 			//Capture the sprites' previous properties for rendering
 			//interpolation
 			this.getLaggingFrames();
@@ -207,8 +206,8 @@ export default class Animate {
 
 			//Reduce the lag counter by the frame duration
 			this.animation.lag -= this.animation.fpsInterval;
-		}
 
+		}
 		//Calculate the lag offset and use it to render the sprites
 		this.animation.lagOffset = this.animation.lag / this.animation.fpsInterval;
 		this.render(this.animation.lagOffset);
@@ -254,7 +253,7 @@ export default class Animate {
 			}
 
 			if (sprite.children && sprite.children.length > 0) {
-				for (var i = 0, len =  sprite.children.length; i < len; i++) {
+				for (var i = 0, len = sprite.children.length; i < len; i++) {
 					var child = sprite.children[i];
 					setProperties(child);
 				}
@@ -487,5 +486,61 @@ export default class Animate {
 				}
 			})(this);
 		}
+	}
+
+	keyBinds(keyCode) {
+		console.log(keyCode);
+		let key = {};
+		key.code = keyCode;
+		key.isDown = false;
+		key.isUp = true;
+		key.press = undefined;
+		key.release = undefined;
+		//The `downHandler`
+		key.downHandler = event => {
+			if (event.keyCode === key.code) {
+				if (key.isUp && key.press) key.press();
+				key.isDown = true;
+				key.isUp = false;
+			}
+			event.preventDefault();
+		};
+
+		//The `upHandler`
+		key.upHandler = event => {
+			if (event.keyCode === key.code) {
+				if (key.isDown && key.release) key.release();
+				key.isDown = false;
+				key.isUp = true;
+			}
+			event.preventDefault();
+		};
+
+		//Attach event listeners
+		window.addEventListener(
+			"keydown", key.downHandler.bind(key), false
+		);
+		window.addEventListener(
+			"keyup", key.upHandler.bind(key), false
+		);
+
+		//Return the key object
+		return key;
+	}
+
+	keyBinding(defaultKeys) {
+		let binds = [],
+			controls = {};
+		if (defaultKeys.arrows) {
+			binds = [{ key: 'left', bind: 37 }, { key: 'up', bind: 38 }, { key: 'right', bind: 39 }, { key: 'down', bind: 40 }];
+		} else {
+			binds = [{ key: 'left', bind: 65 }, { key: 'up', bind: 87 }, { key: 'right', bind: 68 }, { key: 'down', bind: 83 }];
+		}
+
+		for (let i = 0, len = binds.length; i < len; i++) {
+			controls[binds[i].key] = this.keyBinds(binds[i].bind);
+		}
+		log(controls)
+		return controls
 	}
 }

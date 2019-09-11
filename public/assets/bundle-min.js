@@ -45896,7 +45896,8 @@ var renderer = autoRender({
   width: screenY,
   height: screenX,
   backgroundColor: 0x223344
-});
+}); // initialize Helper Library
+
 var FN = new _utils_FN__WEBPACK_IMPORTED_MODULE_1__["default"]({
   renderer: renderer,
   engine: pixi_js__WEBPACK_IMPORTED_MODULE_0__,
@@ -45907,6 +45908,7 @@ scene.appendChild(renderer.view); ///SPRITES
 
 var loader = new Loader();
 var girl = null;
+var girl1 = null;
 var state = true;
 var sprites = {};
 sprites.Girl = {};
@@ -45918,53 +45920,84 @@ loader.load(function (loader, resources) {
     batchName: 'Walk',
     batch: {
       textureKey: 'girl_',
-      list: [24, 11],
+      list: [11],
       forEach: function forEach(sprite, i) {
-        girl = sprite;
-        sprite.vx = 17;
-        sprite.vy = 16; //`xOffset` determines the point from the left of the screen
+        sprite.vx = 0;
+        sprite.vy = 0; //`xOffset` determines the point from the left of the screen
 
         sprite.scale.set(2); //Add the sprite to the stage
 
         stage.addChild(sprite);
       }
     }
-  }); // log(stage.children[0])
+  });
+  girl = sprites.Girl.Walk.walk_0;
+  girl1 = sprites.Girl.Walk.walk_1;
+  var key = FN.keyBinding({
+    arrows: true
+  });
+
+  key.left.press = function () {
+    //Change the girl.s velocity when the key is pressed
+    girl.vx = -10;
+    girl.vy = 0;
+  };
+
+  key.left.release = function () {
+    //If the left arrow has been released, and the right arrow isn't down,
+    //and the girl isn't moving vertically, stop the sprite from moving
+    //by setting its velocity to zero
+    if (!key.right.isDown && girl.vy === 0) {
+      girl.vx = 0;
+    }
+  }; //Ups
+
+
+  key.up.press = function () {
+    girl.vy = -10;
+    girl.vx = 0;
+  };
+
+  key.up.release = function () {
+    if (!key.down.isDown && girl.vx === 0) {
+      girl.vy = 0;
+    }
+  }; //Right
+
+
+  key.right.press = function () {
+    girl.vx = 10;
+    girl.vy = 0;
+  };
+
+  key.right.release = function () {
+    if (!key.left.isDown && girl.vy === 0) {
+      girl.vx = 0;
+    }
+  }; //Down
+
+
+  key.down.press = function () {
+    girl.vy = 10;
+    girl.vx = 0;
+  };
+
+  key.down.release = function () {
+    if (!key.up.isDown && girl.vx === 0) {
+      girl.vy = 0;
+    }
+  }; // log(stage.children[0])
+
 
   FN.startAnimation({
     update: main,
-    fps: 12
+    fps: 30
   });
-});
+}); // Game logic
 
 function main() {
-  if (!state) {
-    return FN.stopAnimation();
-  }
-
-  if (girl.y + girl.height >= screenY) {
-    girl.vy = -girl.vy;
-  }
-
-  if (girl.x + girl.width >= screenX) {
-    girl.vx = -girl.vy;
-  }
-
-  if (girl.y <= 0) {
-    girl.vy = Math.abs(girl.vy);
-  }
-
-  if (girl.x <= 0) {
-    girl.vx = Math.abs(girl.vy);
-  }
-
-  girl.y += girl.vy;
   girl.x += girl.vx;
-}
-
-function toggleAnimation(e) {
-  console.log(e);
-  FN.pauseAnimation();
+  girl.y += girl.vy;
 } //responsive directives
 
 
@@ -45994,6 +46027,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
 
 
 var log = Object(_logger__WEBPACK_IMPORTED_MODULE_0__["default"])('Animate: ');
+var args = ["\n %c %c %c Animate " + 1.2 + " - ✰ " + 'Omar Villanueva' + " ✰  %c  %c  http://www.DigitalVilla.co/  %cs \n\n", 'background: #0066a5; padding:5px 0;', 'background: #0066a5; padding:5px 0;', 'color: #55c3dc; background: #030307; padding:5px 0;', 'background: #0066a5; padding:5px 0;', 'background: #aaaabf; padding:5px 0;', 'background: #0066a5; padding:5px 0;'];
 
 var Animate =
 /*#__PURE__*/
@@ -46001,7 +46035,7 @@ function () {
   function Animate(options) {
     _classCallCheck(this, Animate);
 
-    log('constructor():', 2);
+    console.log.apply(console, args);
     this.stage = options.stage;
     this.engine = options.engine;
     this.renderer = options.renderer;
@@ -46011,13 +46045,7 @@ function () {
       frameCount: 0,
       properties: {}
     };
-    this.singleFrame = this.singleFrame.bind(this);
-    this.textureAtlas = this.textureAtlas.bind(this);
-    this.frameBatch = this.frameBatch.bind(this);
-    this.startAnimation = this.startAnimation.bind(this);
-    this.pauseAnimation = this.pauseAnimation.bind(this);
     this.animate = this.animate.bind(this);
-    this.randomInt = this.randomInt.bind(this);
   }
 
   _createClass(Animate, [{
@@ -46168,22 +46196,22 @@ function () {
   }, {
     key: "startAnimation",
     value: function startAnimation(options) {
+      var start = performance.timing.navigationStart + performance.now();
       this.animation.fpsInterval = 1000 / options.fps;
       this.animation.update = options.update;
       this.animation.fps = options.fps;
       this.animation.lag = 0;
       this.animation.pause = false;
-      this.animation.then = Date.now();
       this.animation.interpolate = true;
-      this.animation.startTime = this.animation.then;
+      this.animation.startTime = start;
       this.animation.properties.position = true;
       this.animation.properties.rotation = true;
       this.animation.properties.alpha = true;
       this.animation.properties.scale = true;
       this.animation.properties.size = true;
       this.animation.properties.tile = true;
-      log(['startAnimating(): startTime', this.animation.startTime]);
       this.animate();
+      log("startAnimation(): fps: ".concat(options.fps, " duration: ").concat(1000 / options.fps, "ms"), 5, true);
     }
   }, {
     key: "animate",
@@ -46503,6 +46531,87 @@ function () {
           }
         })(this);
       }
+    }
+  }, {
+    key: "keyBinds",
+    value: function keyBinds(keyCode) {
+      console.log(keyCode);
+      var key = {};
+      key.code = keyCode;
+      key.isDown = false;
+      key.isUp = true;
+      key.press = undefined;
+      key.release = undefined; //The `downHandler`
+
+      key.downHandler = function (event) {
+        if (event.keyCode === key.code) {
+          if (key.isUp && key.press) key.press();
+          key.isDown = true;
+          key.isUp = false;
+        }
+
+        event.preventDefault();
+      }; //The `upHandler`
+
+
+      key.upHandler = function (event) {
+        if (event.keyCode === key.code) {
+          if (key.isDown && key.release) key.release();
+          key.isDown = false;
+          key.isUp = true;
+        }
+
+        event.preventDefault();
+      }; //Attach event listeners
+
+
+      window.addEventListener("keydown", key.downHandler.bind(key), false);
+      window.addEventListener("keyup", key.upHandler.bind(key), false); //Return the key object
+
+      return key;
+    }
+  }, {
+    key: "keyBinding",
+    value: function keyBinding(defaultKeys) {
+      var binds = [],
+          controls = {};
+
+      if (defaultKeys.arrows) {
+        binds = [{
+          key: 'left',
+          bind: 37
+        }, {
+          key: 'up',
+          bind: 38
+        }, {
+          key: 'right',
+          bind: 39
+        }, {
+          key: 'down',
+          bind: 40
+        }];
+      } else {
+        binds = [{
+          key: 'left',
+          bind: 65
+        }, {
+          key: 'up',
+          bind: 87
+        }, {
+          key: 'right',
+          bind: 68
+        }, {
+          key: 'down',
+          bind: 83
+        }];
+      }
+
+      for (var i = 0, len = binds.length; i < len; i++) {
+        controls[binds[i].key] = this.keyBinds(binds[i].bind);
+      }
+
+      log(controls);
+      return controls;
     }
   }]);
 

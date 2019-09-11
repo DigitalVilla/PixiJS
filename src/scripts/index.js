@@ -14,8 +14,6 @@ let Container = PIXI.Container,
 	scene = document.getElementById('scene'),
 	screenX = 600,
 	screenY = 600;
-
-
 //Create a container object called the `stage`
 let stage = new Container();
 //Create the renderer
@@ -25,18 +23,19 @@ let renderer = autoRender({
 	backgroundColor: 0x223344
 });
 
+// initialize Helper Library
 const FN = new Animate({
 	renderer: renderer,
 	engine: PIXI,
 	stage: stage
 });
-
 //Add the canvas to the HTML document
 scene.appendChild(renderer.view);
 
 ///SPRITES
 const loader = new Loader();
 let girl = null;
+let girl1 = null;
 let state = true;
 const sprites = {};
 sprites.Girl = {};
@@ -49,11 +48,10 @@ loader.load((loader, resources) => {
 		batchName: 'Walk',
 		batch: {
 			textureKey: 'girl_',
-			list: [24,11],
+			list: [11],
 			forEach: function (sprite, i) {
-				girl = sprite;
-				sprite.vx = 17;
-				sprite.vy = 16;
+				sprite.vx = 0;
+				sprite.vy = 0;
 				//`xOffset` determines the point from the left of the screen
 				sprite.scale.set(2)
 				//Add the sprite to the stage
@@ -61,46 +59,68 @@ loader.load((loader, resources) => {
 			}
 		}
 	});
+	girl = sprites.Girl.Walk.walk_0;
+	girl1 = sprites.Girl.Walk.walk_1;
+
+	const key = FN.keyBinding({arrows:true});
+	key.left.press = () => {
+		//Change the girl.s velocity when the key is pressed
+		girl.vx = -10;
+		girl.vy = 0;
+	}
+	key.left.release = () => {
+		//If the left arrow has been released, and the right arrow isn't down,
+		//and the girl isn't moving vertically, stop the sprite from moving
+		//by setting its velocity to zero
+		if (!key.right.isDown && girl.vy === 0) {
+			girl.vx = 0;
+		}
+	}
+	//Ups
+	key.up.press = () => {
+		girl.vy = -10;
+		girl.vx = 0;
+	};
+	key.up.release = () => {
+		if (!key.down.isDown && girl.vx === 0) {
+			girl.vy = 0;
+		}
+	};
+
+	//Right
+	key.right.press = () => {
+		girl.vx = 10;
+		girl.vy = 0;
+	};
+	key.right.release = () => {
+		if (!key.left.isDown && girl.vy === 0) {
+			girl.vx = 0;
+		}
+	};
+
+	//Down
+	key.down.press = () => {
+		girl.vy = 10;
+		girl.vx = 0;
+	};
+	key.down.release = () => {
+		if (!key.up.isDown && girl.vx === 0) {
+			girl.vy = 0;
+		}
+	};
 
 	// log(stage.children[0])
 	FN.startAnimation({
 		update: main,
-		fps: 12
+		fps: 30
 	});
 });
 
-
-
+// Game logic
 function main() {
-	if (!state) {
-		return FN.stopAnimation();
-	}
-
-	if (girl.y + girl.height >= screenY) {
-		girl.vy = -girl.vy;
-	}
-	if (girl.x + girl.width >= screenX) {
-		girl.vx = -girl.vy;
-	}
-
-	if (girl.y <= 0) {
-		girl.vy = Math.abs(girl.vy);
-	}
-	if (girl.x <= 0) {
-		girl.vx = Math.abs(girl.vy);
-	}
-
-	girl.y += girl.vy;
 	girl.x += girl.vx;
+	girl.y += girl.vy;
 }
-
-
-function toggleAnimation(e) {
-	console.log(e);
-
-	FN.pauseAnimation();
-}
-
 
 //responsive directives
 renderer.view.style.position = "absolute";
