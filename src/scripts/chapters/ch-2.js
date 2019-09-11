@@ -68,6 +68,8 @@ loader.load((loader, resources) => {
 
 	log(sprites.Girl)
 
+	// let centerY = (renderer.height / 2) - (girl.walk_0.height / 2);
+	// girl.walk_0.position.set(0, centerY);
 
 	//Position the sprite on the canvas
 	sprites.Girl.Next.next_0.position.set(0, 80);

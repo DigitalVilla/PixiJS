@@ -45879,7 +45879,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-var FN = new _utils_FN__WEBPACK_IMPORTED_MODULE_1__["default"](pixi_js__WEBPACK_IMPORTED_MODULE_0__);
 var log = Object(_utils_logger__WEBPACK_IMPORTED_MODULE_2__["default"])('PixiJS: '); //Docs
 // http://pixijs.download/release/docs/PIXI.htm
 // Aliases
@@ -45887,70 +45886,81 @@ var log = Object(_utils_logger__WEBPACK_IMPORTED_MODULE_2__["default"])('PixiJS:
 var Container = pixi_js__WEBPACK_IMPORTED_MODULE_0__["Container"],
     autoRender = pixi_js__WEBPACK_IMPORTED_MODULE_0__["autoDetectRenderer"],
     Loader = pixi_js__WEBPACK_IMPORTED_MODULE_0__["Loader"],
-    scene = document.getElementById('scene'); //Create a container object called the `stage`
+    scene = document.getElementById('scene'),
+    screenX = 600,
+    screenY = 600; //Create a container object called the `stage`
 
 var stage = new Container(); //Create the renderer
 
 var renderer = autoRender({
-  width: 600,
-  height: 600,
+  width: screenY,
+  height: screenX,
   backgroundColor: 0x223344
+});
+var FN = new _utils_FN__WEBPACK_IMPORTED_MODULE_1__["default"]({
+  renderer: renderer,
+  engine: pixi_js__WEBPACK_IMPORTED_MODULE_0__,
+  stage: stage
 }); //Add the canvas to the HTML document
 
-scene.appendChild(renderer.view); //customize
-///SPRITES
+scene.appendChild(renderer.view); ///SPRITES
 
 var loader = new Loader();
+var girl = null;
+var state = true;
 var sprites = {};
-var girl = {};
+sprites.Girl = {};
 loader.add('girlAtlas', "assets/girlAtlas.json");
 loader.load(function (loader, resources) {
-  log('loader', 5, true);
-  sprites.Girl = {};
-  girl = sprites.Girl.Walk = FN.frameBatch({
+  log('loader', 5);
+  sprites.Girl.Walk = FN.frameBatch({
     textures: resources.girlAtlas.textures,
     batchName: 'Walk',
     batch: {
       textureKey: 'girl_',
-      selection: [6, 11]
+      list: [11],
+      forEach: function forEach(sprite, i) {
+        girl = sprite;
+        sprite.vx = 5;
+        sprite.vy = 4; //`xOffset` determines the point from the left of the screen
+
+        sprite.scale.set(2); //Add the sprite to the stage
+
+        stage.addChild(sprite);
+      }
     }
   });
-  var centerY = renderer.height / 2 - girl.walk_0.height / 2;
-  girl.walk_0.position.set(0, centerY);
-});
-loader.onComplete.add(function () {
-  log('onComplete');
-  stage.addChild(girl.walk_0); // gameLoop();
-
-  FN.startAnimation(4, updateScene);
-  renderer.render(stage);
-  setTimeout(function () {
-    FN.stopAnimation();
-  }, 3000);
-  setTimeout(function () {
-    FN.startAnimation(4, updateScene);
-  }, 6000);
+  FN.startAnimation({
+    update: main,
+    fps: 20
+  });
 });
 
-function updateScene() {
-  //Move the sprite 1 pixel per frame
-  girl.walk_0.x += 4; //Render the stage
+function main() {
+  if (!state) {
+    return FN.stopAnimation();
+  }
 
-  renderer.render(stage);
-}
+  if (girl.y + girl.height >= screenY) {
+    girl.vy = -girl.vy;
+  }
 
-function gameLoop() {
-  // velocity
-  girl.vx = 0;
-  girl.vy = 0; //Loop this function 60 times per second
+  if (girl.x + girl.width >= screenX) {
+    girl.vx = -girl.vy;
+  }
 
-  requestAnimationFrame(gameLoop);
-  updateScene();
-} //Call the `gameLoop` function once to get it started
-//Tell the `renderer` to `render` the `stage`
+  if (girl.y <= 0) {
+    girl.vy = Math.abs(girl.vy);
+  }
 
+  if (girl.x <= 0) {
+    girl.vx = Math.abs(girl.vy);
+  }
 
-renderer.render(stage); //responsive directives
+  girl.y += girl.vy;
+  girl.x += girl.vx;
+} //responsive directives
+
 
 renderer.view.style.position = "absolute";
 renderer.view.style.top = "20%";
@@ -45968,7 +45978,7 @@ renderer.view.style.transform = "translate(-50%,0)";
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return FN; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return Animate; });
 /* harmony import */ var _logger__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./logger */ "./src/scripts/utils/logger.js");
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -45977,16 +45987,18 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
 
-var log = Object(_logger__WEBPACK_IMPORTED_MODULE_0__["default"])('FN: ');
+var log = Object(_logger__WEBPACK_IMPORTED_MODULE_0__["default"])('Animate: ');
 
-var FN =
+var Animate =
 /*#__PURE__*/
 function () {
-  function FN(PIXI) {
-    _classCallCheck(this, FN);
+  function Animate(options) {
+    _classCallCheck(this, Animate);
 
     log('constructor():', 2);
-    this.PIXI = PIXI;
+    this.stage = options.stage;
+    this.engine = options.engine;
+    this.renderer = options.renderer;
     this.animation = {
       testLog: document.getElementById('testLog'),
       testFrame: true,
@@ -45996,22 +46008,28 @@ function () {
     this.textureAtlas = this.textureAtlas.bind(this);
     this.frameBatch = this.frameBatch.bind(this);
     this.startAnimation = this.startAnimation.bind(this);
-    this.stopAnimation = this.stopAnimation.bind(this);
+    this.pauseAnimation = this.pauseAnimation.bind(this);
     this.animate = this.animate.bind(this);
+    this.randomInt = this.randomInt.bind(this);
   }
 
-  _createClass(FN, [{
+  _createClass(Animate, [{
+    key: "randomInt",
+    value: function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+  }, {
     key: "singleFrame",
     value: function singleFrame(texture, tileWidth, tileHeight, xIndex, yIndex) {
       log('singleFrame():', 2);
       var x = xIndex * tileWidth;
       var y = yIndex * tileHeight; //size of the sub-image you want to extract from the texture
 
-      var rectangle = new this.PIXI.Rectangle(x, y, tileWidth, tileHeight); //Tell the texture to use that rectangular section
+      var rectangle = new this.engine.Rectangle(x, y, tileWidth, tileHeight); //Tell the texture to use that rectangular section
 
       texture.frame = rectangle; //Return the sprite from the texture
 
-      return new this.PIXI.Sprite(texture);
+      return new this.engine.Sprite(texture);
     }
   }, {
     key: "frameBatch",
@@ -46026,8 +46044,9 @@ function () {
 
       var list = batch && batch.list; // Get order items
 
-      var selection = batch && batch.selection; // batch container
+      var range = batch && batch.range; // batch container
 
+      var count = 0;
       var sprites = {};
       sprites[batchName] = {};
 
@@ -46037,27 +46056,42 @@ function () {
             var key = "".concat(prefix).concat(list[i]);
 
             if (textures.hasOwnProperty(key)) {
-              var batchKey = "".concat(batchName.toLowerCase(), "_").concat(i);
-              sprites[batchName][batchKey] = new this.PIXI.Sprite(textures[key]);
+              var _batchKey = "".concat(batchName.toLowerCase(), "_").concat(i);
+
+              sprites[batchName][_batchKey] = new this.engine.Sprite(textures[key]);
+
+              if (batch.forEach) {
+                batch.forEach(sprites[batchName][_batchKey], count++);
+              }
             }
           }
-        } else if (prefix && selection && selection.length == 2) {
-          var count = 0;
-
-          for (var _i = selection[0], _len = selection[1]; _i <= _len; _i++) {
+        } else if (prefix && range && range.length == 2) {
+          for (var _i = range[0], _len = range[1]; _i <= _len; _i++) {
             var _key = "".concat(prefix).concat(_i);
 
             if (textures.hasOwnProperty(_key)) {
-              var _batchKey = "".concat(batchName.toLowerCase(), "_").concat(count++);
+              var _batchKey2 = "".concat(batchName.toLowerCase(), "_").concat(count);
 
-              sprites[batchName][_batchKey] = new this.PIXI.Sprite(textures[_key]);
+              sprites[batchName][_batchKey2] = new this.engine.Sprite(textures[_key]);
+
+              if (batch.forEach) {
+                batch.forEach(sprites[batchName][_batchKey2], count);
+              }
+
+              count++;
             }
           }
         }
       } else {
         for (var _key2 in textures) {
           if (textures.hasOwnProperty(_key2)) {
-            sprites[batchName][_key2] = new this.PIXI.Sprite(textures[_key2]);
+            sprites[batchName][_key2] = new this.engine.Sprite(textures[_key2]);
+
+            if (batch.forEach) {
+              batch.forEach(sprites[batchName][batchKey], count);
+            }
+
+            count++;
           }
         }
       }
@@ -46120,60 +46154,371 @@ function () {
       return atlas;
     }
   }, {
-    key: "stopAnimation",
-    value: function stopAnimation() {
-      this.animation.stop = true;
+    key: "pauseAnimation",
+    value: function pauseAnimation() {
+      this.animation.pause = true;
     }
   }, {
     key: "startAnimation",
-    value: function startAnimation(fps, callback) {
-      this.animation.callback = callback;
-      this.animation.stop = false;
-      this.animation.fps = fps;
-      this.animation.fpsInterval = 1000 / fps;
+    value: function startAnimation(options) {
+      this.animation.update = options.update;
+      this.animation.fps = options.fps;
+      this.animation.lag = 0;
+      this.animation.pause = false;
+      this.animation.fpsInterval = 1000 / options.fps;
       this.animation.then = Date.now();
+      this.animation.interpolate = true;
       this.animation.startTime = this.animation.then;
+      this.animation.properties = {};
+      this.animation.properties.position = true;
+      this.animation.properties.rotation = true;
+      this.animation.properties.alpha = true;
+      this.animation.properties.scale = true;
+      this.animation.properties.size = true;
+      this.animation.properties.tile = true;
       log(['startAnimating(): startTime', this.animation.startTime]);
       this.animate();
     }
   }, {
     key: "animate",
     value: function animate() {
-      log('animate', 3, true);
-      var _this$animation = this.animation,
-          fpsInterval = _this$animation.fpsInterval,
-          startTime = _this$animation.startTime,
-          now = _this$animation.now,
-          then = _this$animation.then,
-          elapsed = _this$animation.elapsed,
-          stop = _this$animation.stop,
-          testFrame = _this$animation.testFrame,
-          testLog = _this$animation.testLog;
-      if (stop) return; // request another frame
+      requestAnimationFrame(this.animate);
 
-      requestAnimationFrame(this.animate); // calc elapsed time since last loop
+      if (!this.animation.pause) {
+        // log('animate', 3, true)
+        var _this$animation = this.animation,
+            fpsInterval = _this$animation.fpsInterval,
+            startTime = _this$animation.startTime,
+            now = _this$animation.now,
+            then = _this$animation.then,
+            elapsed = _this$animation.elapsed,
+            pause = _this$animation.pause,
+            testFrame = _this$animation.testFrame,
+            testLog = _this$animation.testLog; //render
 
-      this.animation.now = Date.now();
-      this.animation.elapsed = now - then; // if enough time has elapsed, draw the next frame
+        this.renderer.render(this.stage); // request another frame
+        // calc elapsed time since last loop
 
-      if (elapsed > fpsInterval) {
-        // Get ready for next frame by setting then=now, but...
-        // Also, adjust for fpsInterval not being multiple of 16.67
-        this.animation.then = now - elapsed % fpsInterval; // draw stuff here
+        this.animation.now = Date.now();
+        this.animation.elapsed = now - then; // if enough time has elapsed, draw the next frame
 
-        this.animation.callback();
+        if (elapsed > fpsInterval) {
+          // Get ready for next frame by setting then=now, but...
+          // Also, adjust for fpsInterval not being multiple of 16.67
+          this.animation.then = now - elapsed % fpsInterval; // draw stuff here
+          // this.renderer.render(this.stage)
 
-        if (testFrame) {
-          // TESTING...Report #seconds since start and achieved fps.
-          var sinceStart = now - startTime;
-          var currentFps = Math.round(1000 / (sinceStart / ++this.animation.frameCount) * 100) / 100;
-          testLog.innerText = "Elapsed time: " + Math.round(sinceStart / 1000 * 100) / 100 + " secs @ " + currentFps + " fps.";
+          this.animation.update();
+
+          if (testFrame) {
+            // TESTING...Report #seconds since start and achieved fps.
+            var sinceStart = now - startTime;
+            var currentFps = Math.round(1000 / (sinceStart / ++this.animation.frameCount) * 100) / 100;
+            testLog.innerText = "Elapsed time: " + Math.round(sinceStart / 1000 * 100) / 100 + " secs @ " + currentFps + " fps.";
+          }
         }
+      }
+    } //The `interpolate` function updates the logic function at the
+    //same rate as the user-defined fps, renders the sprites, with
+    //interpolation, at the maximum frame rate the system is capable
+    //of
+
+  }, {
+    key: "interpolate",
+    value: function interpolate() {
+      //Calculate the time that has elapsed since the last frame
+      var current = Date.now(),
+          elapsed = current - this.animation.startTime; //Catch any unexpectedly large frame rate spikes
+
+      if (elapsed > 1000) elapsed = this.animation.fpsInterval; //For interpolation:
+
+      this.animation.startTime = current; //Add the elapsed time to the lag counter
+
+      this.animation.lag += elapsed; //Update the frame if the lag counter is greater than or
+      //equal to the frame duration
+
+      while (this.animation.lag >= this.animation.fpsInterval) {
+        //Capture the sprites' previous properties for rendering
+        //interpolation
+        this.getInterpolation(); //Update the logic in the user-defined update function
+
+        this.animation.update(); //Reduce the lag counter by the frame duration
+
+        this.animation.lag -= this.animation.fpsInterval;
+      } //Calculate the lag offset and use it to render the sprites
+
+
+      this.animation.lagOffset = this.animation.lag / this.animation.fpsInterval;
+      this.render(this.animation.lagOffset);
+    } //`capturePreviousSpritePositions`
+    //This function is run in the game loop just before the logic update
+    //to store all the sprites' previous positions from the last frame.
+    //It allows the render function to interpolate the sprite positions
+    //for ultra-smooth sprite rendering at any frame rate
+
+  }, {
+    key: "getInterpolation",
+    value: function getInterpolation() {
+      //A function that capture's the sprites properties
+      var setProperties = function setProperties(sprite) {
+        if (this.animation.properties.position) {
+          sprite._previousX = sprite.x;
+          sprite._previousY = sprite.y;
+        }
+
+        if (this.animation.properties.rotation) {
+          sprite._previousRotation = sprite.rotation;
+        }
+
+        if (this.animation.properties.size) {
+          sprite._previousWidth = sprite.width;
+          sprite._previousHeight = sprite.height;
+        }
+
+        if (this.animation.properties.scale) {
+          sprite._previousScaleX = sprite.scale.x;
+          sprite._previousScaleY = sprite.scale.y;
+        }
+
+        if (this.animation.properties.alpha) {
+          sprite._previousAlpha = sprite.alpha;
+        }
+
+        if (this.animation.properties.tile) {
+          if (sprite.tilePosition !== undefined) {
+            sprite._previousTilePositionX = sprite.tilePosition.x;
+            sprite._previousTilePositionY = sprite.tilePosition.y;
+          }
+
+          if (sprite.tileScale !== undefined) {
+            sprite._previousTileScaleX = sprite.tileScale.x;
+            sprite._previousTileScaleY = sprite.tileScale.y;
+          }
+        }
+
+        if (sprite.children && sprite.children.length > 0) {
+          for (var i = 0; i < sprite.children.length; i++) {
+            var child = sprite.children[i];
+            setProperties(child);
+          }
+        }
+      }; //loop through the all the sprites and capture their properties
+
+
+      for (var i = 0; i < this.stage.children.length; i++) {
+        var sprite = this.stage.children[i];
+        setProperties(sprite);
+      }
+    } //Smoothie's `render` method will interpolate the sprite positions and
+    //rotation for
+    //ultra-smooth animation, if Hexi's `interpolate` property is `true`
+    //(it is by default)
+
+  }, {
+    key: "render",
+    value: function render() {
+      var lagOffset = arguments.length <= 0 || arguments[0] === undefined ? 1 : arguments[0]; //Calculate the sprites' interpolated render positions if
+      //`this.interpolate` is `true` (It is true by default)
+
+      if (this.animation.interpolate) {
+        (function () {
+          //A recursive function that does the work of figuring out the
+          //interpolated positions
+          var interpolateSprite = function interpolateSprite(sprite) {
+            //Position (`x` and `y` properties)
+            if (this.animation.properties.position) {
+              //Capture the sprite's current x and y positions
+              sprite._currentX = sprite.x;
+              sprite._currentY = sprite.y; //Figure out its interpolated positions
+
+              if (sprite._previousX !== undefined) {
+                sprite.x = (sprite.x - sprite._previousX) * lagOffset + sprite._previousX;
+              }
+
+              if (sprite._previousY !== undefined) {
+                sprite.y = (sprite.y - sprite._previousY) * lagOffset + sprite._previousY;
+              }
+            } //Rotation (`rotation` property)
+
+
+            if (this.animation.properties.rotation) {
+              //Capture the sprite's current rotation
+              sprite._currentRotation = sprite.rotation; //Figure out its interpolated rotation
+
+              if (sprite._previousRotation !== undefined) {
+                sprite.rotation = (sprite.rotation - sprite._previousRotation) * lagOffset + sprite._previousRotation;
+              }
+            } //Size (`width` and `height` properties)
+
+
+            if (this.animation.properties.size) {
+              //Only allow this for Sprites or MovieClips. Because
+              //Containers vary in size when the sprites they contain
+              //move, the interpolation will cause them to scale erraticly
+              if (sprite instanceof this.Sprite || sprite instanceof this.MovieClip) {
+                //Capture the sprite's current size
+                sprite._currentWidth = sprite.width;
+                sprite._currentHeight = sprite.height; //Figure out the sprite's interpolated size
+
+                if (sprite._previousWidth !== undefined) {
+                  sprite.width = (sprite.width - sprite._previousWidth) * lagOffset + sprite._previousWidth;
+                }
+
+                if (sprite._previousHeight !== undefined) {
+                  sprite.height = (sprite.height - sprite._previousHeight) * lagOffset + sprite._previousHeight;
+                }
+              }
+            } //Scale (`scale.x` and `scale.y` properties)
+
+
+            if (this.animation.properties.scale) {
+              //Capture the sprite's current scale
+              sprite._currentScaleX = sprite.scale.x;
+              sprite._currentScaleY = sprite.scale.y; //Figure out the sprite's interpolated scale
+
+              if (sprite._previousScaleX !== undefined) {
+                sprite.scale.x = (sprite.scale.x - sprite._previousScaleX) * lagOffset + sprite._previousScaleX;
+              }
+
+              if (sprite._previousScaleY !== undefined) {
+                sprite.scale.y = (sprite.scale.y - sprite._previousScaleY) * lagOffset + sprite._previousScaleY;
+              }
+            } //Alpha (`alpha` property)
+
+
+            if (this.animation.properties.alpha) {
+              //Capture the sprite's current alpha
+              sprite._currentAlpha = sprite.alpha; //Figure out its interpolated alpha
+
+              if (sprite._previousAlpha !== undefined) {
+                sprite.alpha = (sprite.alpha - sprite._previousAlpha) * lagOffset + sprite._previousAlpha;
+              }
+            } //Tiling sprite properties (`tileposition` and `tileScale` x
+            //and y values)
+
+
+            if (this.animation.properties.tile) {
+              //`tilePosition.x` and `tilePosition.y`
+              if (sprite.tilePosition !== undefined) {
+                //Capture the sprite's current tile x and y positions
+                sprite._currentTilePositionX = sprite.tilePosition.x;
+                sprite._currentTilePositionY = sprite.tilePosition.y; //Figure out its interpolated positions
+
+                if (sprite._previousTilePositionX !== undefined) {
+                  sprite.tilePosition.x = (sprite.tilePosition.x - sprite._previousTilePositionX) * lagOffset + sprite._previousTilePositionX;
+                }
+
+                if (sprite._previousTilePositionY !== undefined) {
+                  sprite.tilePosition.y = (sprite.tilePosition.y - sprite._previousTilePositionY) * lagOffset + sprite._previousTilePositionY;
+                }
+              } //`tileScale.x` and `tileScale.y`
+
+
+              if (sprite.tileScale !== undefined) {
+                //Capture the sprite's current tile scale
+                sprite._currentTileScaleX = sprite.tileScale.x;
+                sprite._currentTileScaleY = sprite.tileScale.y; //Figure out the sprite's interpolated scale
+
+                if (sprite._previousTileScaleX !== undefined) {
+                  sprite.tileScale.x = (sprite.tileScale.x - sprite._previousTileScaleX) * lagOffset + sprite._previousTileScaleX;
+                }
+
+                if (sprite._previousTileScaleY !== undefined) {
+                  sprite.tileScale.y = (sprite.tileScale.y - sprite._previousTileScaleY) * lagOffset + sprite._previousTileScaleY;
+                }
+              }
+            } //Interpolate the sprite's children, if it has any
+
+
+            if (sprite.children.length !== 0) {
+              for (var j = 0; j < sprite.children.length; j++) {
+                //Find the sprite's child
+                var child = sprite.children[j]; //display the child
+
+                interpolateSprite(child);
+              }
+            }
+          }; //loop through the all the sprites and interpolate them
+
+
+          for (var i = 0; i < this.stage.children.length; i++) {
+            var sprite = this.stage.children[i];
+            interpolateSprite(sprite);
+          }
+        })();
+      } //Render the stage. If the sprite positions have been
+      //interpolated, those position values will be used to render the
+      //sprite
+
+
+      this.renderer.render(this.stage); //Restore the sprites' original x and y values if they've been
+      //interpolated for this frame
+
+      if (this.interpolate) {
+        (function () {
+          //A recursive function that restores the sprite's original,
+          //uninterpolated x and y positions
+          var restoreSpriteProperties = function restoreSpriteProperties(sprite) {
+            if (this.animation.properties.position) {
+              sprite.x = sprite._currentX;
+              sprite.y = sprite._currentY;
+            }
+
+            if (this.animation.properties.rotation) {
+              sprite.rotation = sprite._currentRotation;
+            }
+
+            if (this.animation.properties.size) {
+              //Only allow this for Sprites or Movie clips, to prevent
+              //Container scaling bug
+              if (sprite instanceof this.Sprite || sprite instanceof this.MovieClip) {
+                sprite.width = sprite._currentWidth;
+                sprite.height = sprite._currentHeight;
+              }
+            }
+
+            if (this.animation.properties.scale) {
+              sprite.scale.x = sprite._currentScaleX;
+              sprite.scale.y = sprite._currentScaleY;
+            }
+
+            if (this.animation.properties.alpha) {
+              sprite.alpha = sprite._currentAlpha;
+            }
+
+            if (this.animation.properties.tile) {
+              if (sprite.tilePosition !== undefined) {
+                sprite.tilePosition.x = sprite._currentTilePositionX;
+                sprite.tilePosition.y = sprite._currentTilePositionY;
+              }
+
+              if (sprite.tileScale !== undefined) {
+                sprite.tileScale.x = sprite._currentTileScaleX;
+                sprite.tileScale.y = sprite._currentTileScaleY;
+              }
+            } //Restore the sprite's children, if it has any
+
+
+            if (sprite.children.length !== 0) {
+              for (var i = 0; i < sprite.children.length; i++) {
+                //Find the sprite's child
+                var child = sprite.children[i]; //Restore the child sprite properties
+
+                restoreSpriteProperties(child);
+              }
+            }
+          };
+
+          for (var i = 0; i < this.stage.children.length; i++) {
+            var sprite = this.stage.children[i];
+            restoreSpriteProperties(sprite);
+          }
+        })();
       }
     }
   }]);
 
-  return FN;
+  return Animate;
 }();
 
 
