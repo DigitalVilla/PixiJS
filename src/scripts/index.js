@@ -49,11 +49,11 @@ loader.load((loader, resources) => {
 		batchName: 'Walk',
 		batch: {
 			textureKey: 'girl_',
-			list: [11],
+			list: [24,11],
 			forEach: function (sprite, i) {
 				girl = sprite;
-				sprite.vx = 5;
-				sprite.vy = 4;
+				sprite.vx = 17;
+				sprite.vy = 16;
 				//`xOffset` determines the point from the left of the screen
 				sprite.scale.set(2)
 				//Add the sprite to the stage
@@ -61,11 +61,14 @@ loader.load((loader, resources) => {
 			}
 		}
 	});
+
+	// log(stage.children[0])
 	FN.startAnimation({
 		update: main,
-		fps: 20
+		fps: 12
 	});
 });
+
 
 
 function main() {
@@ -89,6 +92,13 @@ function main() {
 
 	girl.y += girl.vy;
 	girl.x += girl.vx;
+}
+
+
+function toggleAnimation(e) {
+	console.log(e);
+
+	FN.pauseAnimation();
 }
 
 

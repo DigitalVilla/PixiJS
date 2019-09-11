@@ -9,7 +9,8 @@ export default class Animate {
 		this.animation = {
 			testLog: document.getElementById('testLog'),
 			testFrame: true,
-			frameCount: 0
+			frameCount: 0,
+			properties: {}
 		};
 
 		this.singleFrame = this.singleFrame.bind(this);
@@ -135,15 +136,14 @@ export default class Animate {
 	}
 
 	startAnimation(options) {
+		this.animation.fpsInterval = 1000 / options.fps;
 		this.animation.update = options.update;
 		this.animation.fps = options.fps;
 		this.animation.lag = 0;
 		this.animation.pause = false;
-		this.animation.fpsInterval = 1000 / options.fps;
 		this.animation.then = Date.now();
 		this.animation.interpolate = true;
 		this.animation.startTime = this.animation.then;
-		this.animation.properties = {};
 		this.animation.properties.position = true;
 		this.animation.properties.rotation = true;
 		this.animation.properties.alpha = true;
@@ -160,33 +160,18 @@ export default class Animate {
 	animate() {
 		requestAnimationFrame(this.animate);
 		if (!this.animation.pause) {
-			// log('animate', 3, true)
-			const { fpsInterval, startTime, now, then, elapsed, pause, testFrame, testLog } = this.animation;
+			// log('ANIMATE', 3, true)
 
-			//render
-			this.renderer.render(this.stage)
-			// request another frame
-			// calc elapsed time since last loop
-			this.animation.now = Date.now();
-			this.animation.elapsed = now - then;
-
-			// if enough time has elapsed, draw the next frame
-			if (elapsed > fpsInterval) {
-				// Get ready for next frame by setting then=now, but...
-				// Also, adjust for fpsInterval not being multiple of 16.67
-				this.animation.then = now - (elapsed % fpsInterval);
-
-				// draw stuff here
-				// this.renderer.render(this.stage)
+			//If the `fps` hasn't been defined, call the user-defined update
+			//function and render the sprites at the maximum rate the
+			//system is capable of
+			if (this.animation.fps === undefined) {
+				//Run the user-defined game logic function each frame of the
+				//game at the maxium frame rate your system is capable of
 				this.animation.update();
-
-				if (testFrame) {
-					// TESTING...Report #seconds since start and achieved fps.
-					var sinceStart = now - startTime;
-					var currentFps = Math.round(1000 / (sinceStart / ++this.animation.frameCount) * 100) / 100;
-					testLog.innerText = "Elapsed time: " + Math.round(sinceStart / 1000 * 100) / 100 + " secs @ " + currentFps + " fps.";
-				}
-
+				this.renderer.render(this.stage);
+			} else {
+				this.interpolate();
 			}
 		}
 	}
@@ -197,7 +182,7 @@ export default class Animate {
 	//of
 	interpolate() {
 		//Calculate the time that has elapsed since the last frame
-		let current = Date.now(),
+		let current = performance.timing.navigationStart+performance.now(), //Date.now()
 			elapsed = current - this.animation.startTime;
 
 		//Catch any unexpectedly large frame rate spikes
@@ -215,7 +200,7 @@ export default class Animate {
 
 			//Capture the sprites' previous properties for rendering
 			//interpolation
-			this.getInterpolation();
+			this.getLaggingFrames();
 
 			//Update the logic in the user-defined update function
 			this.animation.update();
@@ -227,6 +212,7 @@ export default class Animate {
 		//Calculate the lag offset and use it to render the sprites
 		this.animation.lagOffset = this.animation.lag / this.animation.fpsInterval;
 		this.render(this.animation.lagOffset);
+		// this.renderer.render(this.stage);
 	}
 
 	//`capturePreviousSpritePositions`
@@ -234,28 +220,29 @@ export default class Animate {
 	//to store all the sprites' previous positions from the last frame.
 	//It allows the render function to interpolate the sprite positions
 	//for ultra-smooth sprite rendering at any frame rate
-	getInterpolation() {
+	getLaggingFrames() {
+		let self = this;
 		//A function that capture's the sprites properties
 		var setProperties = function setProperties(sprite) {
-			if (this.animation.properties.position) {
+			if (self.animation.properties.position) {
 				sprite._previousX = sprite.x;
 				sprite._previousY = sprite.y;
 			}
-			if (this.animation.properties.rotation) {
+			if (self.animation.properties.rotation) {
 				sprite._previousRotation = sprite.rotation;
 			}
-			if (this.animation.properties.size) {
+			if (self.animation.properties.size) {
 				sprite._previousWidth = sprite.width;
 				sprite._previousHeight = sprite.height;
 			}
-			if (this.animation.properties.scale) {
+			if (self.animation.properties.scale) {
 				sprite._previousScaleX = sprite.scale.x;
 				sprite._previousScaleY = sprite.scale.y;
 			}
-			if (this.animation.properties.alpha) {
+			if (self.animation.properties.alpha) {
 				sprite._previousAlpha = sprite.alpha;
 			}
-			if (this.animation.properties.tile) {
+			if (self.animation.properties.tile) {
 				if (sprite.tilePosition !== undefined) {
 					sprite._previousTilePositionX = sprite.tilePosition.x;
 					sprite._previousTilePositionY = sprite.tilePosition.y;
@@ -267,7 +254,7 @@ export default class Animate {
 			}
 
 			if (sprite.children && sprite.children.length > 0) {
-				for (var i = 0; i < sprite.children.length; i++) {
+				for (var i = 0, len =  sprite.children.length; i < len; i++) {
 					var child = sprite.children[i];
 					setProperties(child);
 				}
@@ -275,7 +262,7 @@ export default class Animate {
 		};
 
 		//loop through the all the sprites and capture their properties
-		for (var i = 0; i < this.stage.children.length; i++) {
+		for (var i = 0, len = this.stage.children.length; i < len; i++) {
 			var sprite = this.stage.children[i];
 			setProperties(sprite);
 		}
@@ -293,14 +280,14 @@ export default class Animate {
 		//`this.interpolate` is `true` (It is true by default)
 
 		if (this.animation.interpolate) {
-			(function () {
+			(function (self) {
 
 				//A recursive function that does the work of figuring out the
 				//interpolated positions
 				var interpolateSprite = function interpolateSprite(sprite) {
 
 					//Position (`x` and `y` properties)
-					if (this.animation.properties.position) {
+					if (self.animation.properties.position) {
 
 						//Capture the sprite's current x and y positions
 						sprite._currentX = sprite.x;
@@ -316,7 +303,7 @@ export default class Animate {
 					}
 
 					//Rotation (`rotation` property)
-					if (this.animation.properties.rotation) {
+					if (self.animation.properties.rotation) {
 
 						//Capture the sprite's current rotation
 						sprite._currentRotation = sprite.rotation;
@@ -328,12 +315,12 @@ export default class Animate {
 					}
 
 					//Size (`width` and `height` properties)
-					if (this.animation.properties.size) {
+					if (self.animation.properties.size) {
 
 						//Only allow this for Sprites or MovieClips. Because
 						//Containers vary in size when the sprites they contain
 						//move, the interpolation will cause them to scale erraticly
-						if (sprite instanceof this.Sprite || sprite instanceof this.MovieClip) {
+						if (sprite instanceof self.engine.Sprite || sprite instanceof self.engine.extras.MovieClip) {
 
 							//Capture the sprite's current size
 							sprite._currentWidth = sprite.width;
@@ -350,7 +337,7 @@ export default class Animate {
 					}
 
 					//Scale (`scale.x` and `scale.y` properties)
-					if (this.animation.properties.scale) {
+					if (self.animation.properties.scale) {
 
 						//Capture the sprite's current scale
 						sprite._currentScaleX = sprite.scale.x;
@@ -366,7 +353,7 @@ export default class Animate {
 					}
 
 					//Alpha (`alpha` property)
-					if (this.animation.properties.alpha) {
+					if (self.animation.properties.alpha) {
 
 						//Capture the sprite's current alpha
 						sprite._currentAlpha = sprite.alpha;
@@ -379,7 +366,7 @@ export default class Animate {
 
 					//Tiling sprite properties (`tileposition` and `tileScale` x
 					//and y values)
-					if (this.animation.properties.tile) {
+					if (self.animation.properties.tile) {
 
 						//`tilePosition.x` and `tilePosition.y`
 						if (sprite.tilePosition !== undefined) {
@@ -428,11 +415,11 @@ export default class Animate {
 				};
 
 				//loop through the all the sprites and interpolate them
-				for (var i = 0; i < this.stage.children.length; i++) {
-					var sprite = this.stage.children[i];
+				for (var i = 0; i < self.stage.children.length; i++) {
+					var sprite = self.stage.children[i];
 					interpolateSprite(sprite);
 				}
-			})();
+			})(this);
 		}
 
 		//Render the stage. If the sprite positions have been
@@ -442,36 +429,36 @@ export default class Animate {
 
 		//Restore the sprites' original x and y values if they've been
 		//interpolated for this frame
-		if (this.interpolate) {
-			(function () {
+		if (this.animation.interpolate) {
+			(function (self) {
 
 				//A recursive function that restores the sprite's original,
 				//uninterpolated x and y positions
 				var restoreSpriteProperties = function restoreSpriteProperties(sprite) {
-					if (this.animation.properties.position) {
+					if (self.animation.properties.position) {
 						sprite.x = sprite._currentX;
 						sprite.y = sprite._currentY;
 					}
-					if (this.animation.properties.rotation) {
+					if (self.animation.properties.rotation) {
 						sprite.rotation = sprite._currentRotation;
 					}
-					if (this.animation.properties.size) {
+					if (self.animation.properties.size) {
 
 						//Only allow this for Sprites or Movie clips, to prevent
 						//Container scaling bug
-						if (sprite instanceof this.Sprite || sprite instanceof this.MovieClip) {
+						if (sprite instanceof self.engine.Sprite || sprite instanceof self.engine.extras.MovieClip) {
 							sprite.width = sprite._currentWidth;
 							sprite.height = sprite._currentHeight;
 						}
 					}
-					if (this.animation.properties.scale) {
+					if (self.animation.properties.scale) {
 						sprite.scale.x = sprite._currentScaleX;
 						sprite.scale.y = sprite._currentScaleY;
 					}
-					if (this.animation.properties.alpha) {
+					if (self.animation.properties.alpha) {
 						sprite.alpha = sprite._currentAlpha;
 					}
-					if (this.animation.properties.tile) {
+					if (self.animation.properties.tile) {
 						if (sprite.tilePosition !== undefined) {
 							sprite.tilePosition.x = sprite._currentTilePositionX;
 							sprite.tilePosition.y = sprite._currentTilePositionY;
@@ -494,11 +481,11 @@ export default class Animate {
 						}
 					}
 				};
-				for (var i = 0; i < this.stage.children.length; i++) {
-					var sprite = this.stage.children[i];
+				for (var i = 0; i < self.stage.children.length; i++) {
+					var sprite = self.stage.children[i];
 					restoreSpriteProperties(sprite);
 				}
-			})();
+			})(this);
 		}
 	}
 }
