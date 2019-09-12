@@ -45879,7 +45879,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-var log = Object(_utils_logger__WEBPACK_IMPORTED_MODULE_2__["default"])('PixiJS: '); //Docs
+var log = Object(_utils_logger__WEBPACK_IMPORTED_MODULE_2__["default"])('PixiJS: ');
+var btn = document.getElementById('control'); //Docs
 // http://pixijs.download/release/docs/PIXI.htm
 // Aliases
 
@@ -45895,7 +45896,7 @@ var stage = new Container(); //Create the renderer
 var renderer = autoRender({
   width: screenY,
   height: screenX,
-  backgroundColor: 0x223344
+  backgroundColor: 0xDDDDDD
 }); // initialize Helper Library
 
 var FN = new _utils_FN__WEBPACK_IMPORTED_MODULE_1__["default"]({
@@ -45908,22 +45909,21 @@ scene.appendChild(renderer.view); ///SPRITES
 
 var loader = new Loader();
 var girl = null;
-var girl1 = null;
-var state = true;
 var sprites = {};
 sprites.Girl = {};
-loader.add('girlAtlas', "assets/girlAtlas.json");
+sprites.Font = {};
+loader.add('girlAtlas', "assets/girlAtlas.json").add('fontAtlas', "assets/fontAtlas.json");
 loader.load(function (loader, resources) {
   log('loader', 5);
-  sprites.Girl.Walk = FN.frameBatch({
-    textures: resources.girlAtlas.textures,
-    batchName: 'Walk',
+  sprites.Font.Numeric = FN.frameBatch({
+    textures: resources.fontAtlas.textures,
+    batchName: 'Num',
+    baseTexture: true,
     batch: {
-      textureKey: 'girl_',
-      list: [11],
+      textureKey: 'font_',
+      range: [16, 25],
       forEach: function forEach(sprite, i) {
-        sprite.vx = 0;
-        sprite.vy = 0; //`xOffset` determines the point from the left of the screen
+        sprite.x = i * sprite.width + 10 * i; //`xOffset` determines the point from the left of the screen
 
         sprite.scale.set(2); //Add the sprite to the stage
 
@@ -45931,75 +45931,140 @@ loader.load(function (loader, resources) {
       }
     }
   });
-  girl = sprites.Girl.Walk.walk_0;
-  girl1 = sprites.Girl.Walk.walk_1;
+  sprites.Font.Alpha = FN.frameBatch({
+    textures: resources.fontAtlas.textures,
+    batchName: 'Alpha',
+    batch: {
+      baseTexture: true,
+      textureKey: 'font_',
+      range: [33, 58],
+      forEach: function forEach(sprite, i) {
+        sprite.x = i * sprite.width + 1 * i;
+        sprite.y = 100; //`xOffset` determines the point from the left of the screen
+
+        sprite.scale.set(2); //Add the sprite to the stage
+
+        stage.addChild(sprite);
+      }
+    }
+  });
+  sprites.Girl.Walk = FN.frameBatch({
+    textures: resources.girlAtlas.textures,
+    batchName: 'Walk',
+    batch: {
+      textureKey: 'girl_',
+      list: [11],
+      forEach: function forEach(sprite, i) {
+        sprite.getCollision = FN.setCollision(sprite, {
+          left: -40,
+          top: -10,
+          right: screenX + 45,
+          bottom: screenY + 15
+        });
+        sprite.accelerationX = 0;
+        sprite.accelerationY = 0;
+        sprite.frictionX = 1;
+        sprite.frictionY = 1;
+        sprite.speed = 0.2;
+        sprite.drag = 0.6;
+        sprite.vx = 0;
+        sprite.vy = 0;
+        sprite.x = 0;
+        sprite.y = 400; //`xOffset` determines the point from the left of the screen
+
+        sprite.scale.set(2); //Add the sprite to the stage
+
+        stage.addChild(sprite);
+      }
+    }
+  });
+  girl = sprites.Girl.Walk[0];
   var key = FN.keyBinding({
     arrows: true
-  });
+  }); //Left arrow key `press` method
 
   key.left.press = function () {
-    //Change the girl.s velocity when the key is pressed
-    girl.vx = -10;
-    girl.vy = 0;
+    girl.accelerationX = -girl.speed;
+    girl.frictionX = 1;
   };
 
   key.left.release = function () {
-    //If the left arrow has been released, and the right arrow isn't down,
-    //and the girl isn't moving vertically, stop the sprite from moving
-    //by setting its velocity to zero
-    if (!key.right.isDown && girl.vy === 0) {
-      girl.vx = 0;
+    if (!key.right.isDown) {
+      girl.accelerationX = 0;
+      girl.frictionX = girl.drag;
     }
-  }; //Ups
-
+  };
 
   key.up.press = function () {
-    girl.vy = -10;
-    girl.vx = 0;
+    girl.accelerationY = -girl.speed;
+    girl.frictionY = 1;
   };
 
   key.up.release = function () {
-    if (!key.down.isDown && girl.vx === 0) {
-      girl.vy = 0;
+    if (!key.down.isDown) {
+      girl.accelerationY = 0;
+      girl.frictionY = girl.drag;
     }
-  }; //Right
-
+  };
 
   key.right.press = function () {
-    girl.vx = 10;
-    girl.vy = 0;
+    girl.accelerationX = girl.speed;
+    girl.frictionX = 1;
   };
 
   key.right.release = function () {
-    if (!key.left.isDown && girl.vy === 0) {
-      girl.vx = 0;
+    if (!key.left.isDown) {
+      girl.accelerationX = 0;
+      girl.frictionX = girl.drag;
     }
-  }; //Down
-
+  };
 
   key.down.press = function () {
-    girl.vy = 10;
-    girl.vx = 0;
+    girl.accelerationY = girl.speed;
+    girl.frictionY = 1;
   };
 
   key.down.release = function () {
-    if (!key.up.isDown && girl.vx === 0) {
-      girl.vy = 0;
+    if (!key.up.isDown) {
+      girl.accelerationY = 0;
+      girl.frictionY = girl.drag;
     }
-  }; // log(stage.children[0])
-
+  };
 
   FN.startAnimation({
     update: main,
-    fps: 30
+    logicFps: 20
   });
-}); // Game logic
+}); // log(FN.getTextureAtlas('font', 300, 160, 15, 8), 1, true);
+// Game logic
 
 function main() {
+  var collision = girl.getCollision();
+  girl.vx += girl.accelerationX;
+  girl.vy += girl.accelerationY;
+  girl.vx *= girl.frictionX;
+  girl.vy *= girl.frictionY;
   girl.x += girl.vx;
   girl.y += girl.vy;
-} //responsive directives
+  girl.y += 0.8; //Check for a collision. If the value of `collision` isn't
+  //`undefined` then you know the sprite hit a boundary
 
+  if (collision) {
+    //Reverse the sprite's `vx` value if it hits the left or right
+    if (collision.has("left") || collision.has("right")) {
+      girl.vx = -girl.vx;
+    } //Reverse the sprite's `vy` value if it hits the top or bottom
+
+
+    if (collision.has("top") || collision.has("bottom")) {
+      girl.vy = -(girl.vy * .5);
+    }
+  }
+}
+
+btn.addEventListener('click', function () {
+  return FN.pauseAnimation();
+}); //responsive directives
 
 renderer.view.style.position = "absolute";
 renderer.view.style.top = "20%";
@@ -46069,12 +46134,15 @@ function () {
   }, {
     key: "frameBatch",
     value: function frameBatch(options) {
+      var _this = this;
+
       log('frameBatch():', 2);
       var textures = options.textures; // Name of this new batch
 
       var batchName = options.batchName || 'batchImage'; // Get a selection of items
 
       var batch = options.batch;
+      var baseTexture = batch && batch.baseTexture;
       var prefix = batch && batch.textureKey; // Get unordered items
 
       var list = batch && batch.list; // Get order items
@@ -46083,7 +46151,16 @@ function () {
 
       var count = 0;
       var sprites = {};
-      sprites[batchName] = {};
+      var spritesArr = sprites[batchName] = [];
+
+      var setSprite = function setSprite(texture, i) {
+        // let batchKey = key || `${batchName.toLowerCase()}_${i}`;
+        // let [batchKey] = new this.engine.Sprite(texture);
+        spritesArr.push(new _this.engine.Sprite(texture));
+        if (baseTexture) spritesArr[i].texture.baseTexture.scaleMode = _this.engine.SCALE_MODES.NEAREST;
+        if (batch.forEach) batch.forEach(spritesArr[i], i);
+        count++;
+      };
 
       if (batch) {
         if (prefix && list && list.length) {
@@ -46091,13 +46168,7 @@ function () {
             var key = "".concat(prefix).concat(list[i]);
 
             if (textures.hasOwnProperty(key)) {
-              var _batchKey = "".concat(batchName.toLowerCase(), "_").concat(i);
-
-              sprites[batchName][_batchKey] = new this.engine.Sprite(textures[key]);
-
-              if (batch.forEach) {
-                batch.forEach(sprites[batchName][_batchKey], count++);
-              }
+              setSprite(textures[key], count);
             }
           }
         } else if (prefix && range && range.length == 2) {
@@ -46105,28 +46176,14 @@ function () {
             var _key = "".concat(prefix).concat(_i);
 
             if (textures.hasOwnProperty(_key)) {
-              var _batchKey2 = "".concat(batchName.toLowerCase(), "_").concat(count);
-
-              sprites[batchName][_batchKey2] = new this.engine.Sprite(textures[_key]);
-
-              if (batch.forEach) {
-                batch.forEach(sprites[batchName][_batchKey2], count);
-              }
-
-              count++;
+              setSprite(textures[_key], count);
             }
           }
         }
       } else {
         for (var _key2 in textures) {
           if (textures.hasOwnProperty(_key2)) {
-            sprites[batchName][_key2] = new this.engine.Sprite(textures[_key2]);
-
-            if (batch.forEach) {
-              batch.forEach(sprites[batchName][batchKey], count);
-            }
-
-            count++;
+            setSprite(textures[_key2], count);
           }
         }
       }
@@ -46134,8 +46191,9 @@ function () {
       return sprites[batchName];
     }
   }, {
-    key: "textureAtlas",
-    value: function textureAtlas(prefix, mapWidth, mapHeight, countX, countY, totalCount) {
+    key: "getTextureAtlas",
+    value: function getTextureAtlas(prefix, mapWidth, mapHeight, countX, countY, totalCount) {
+      // log(FN.getTextureAtlas('font',300,160,15,8),1,true);
       log('textureAtlas():', 2);
       var tileW = mapWidth / countX;
       var tileY = mapHeight / countY;
@@ -46186,24 +46244,28 @@ function () {
         },
         scale: "1"
       };
-      return atlas;
+      return JSON.stringify(atlas);
     }
   }, {
     key: "pauseAnimation",
     value: function pauseAnimation() {
-      this.animation.pause = true;
+      this.animation.pause = !this.animation.pause;
     }
   }, {
     key: "startAnimation",
     value: function startAnimation(options) {
       var start = performance.timing.navigationStart + performance.now();
-      this.animation.fpsInterval = 1000 / options.fps;
+      this.animation.fpsInterval = 1000 / options.logicFps;
       this.animation.update = options.update;
-      this.animation.fps = options.fps;
-      this.animation.lag = 0;
-      this.animation.pause = false;
-      this.animation.interpolate = true;
+      this.animation.fps = options.logicFps;
       this.animation.startTime = start;
+      this.animation.lag = 0;
+      this.animation.interpolate = true;
+      this.animation.pause = false; // Reneder clamping
+
+      this.animation.renderStartTime = 0;
+      this.animation.renderFps = options.renderFps;
+      this.animation.renderDuration = 1000 / options.renderFps;
       this.animation.properties.position = true;
       this.animation.properties.rotation = true;
       this.animation.properties.alpha = true;
@@ -46211,12 +46273,11 @@ function () {
       this.animation.properties.size = true;
       this.animation.properties.tile = true;
       this.animate();
-      log("startAnimation(): fps: ".concat(options.fps, " duration: ").concat(1000 / options.fps, "ms"), 5, true);
     }
   }, {
     key: "animate",
-    value: function animate() {
-      requestAnimationFrame(this.animate);
+    value: function animate(timestamp) {
+      requestAnimationFrame(this.animate.bind(this));
 
       if (!this.animation.pause) {
         // log('ANIMATE', 3, true)
@@ -46228,8 +46289,17 @@ function () {
           //game at the maxium frame rate your system is capable of
           this.animation.update();
           this.renderer.render(this.stage);
-        } else {
+        } else if (!this.animation.renderFps) {
           this.interpolate();
+        } else {
+          //Implement optional frame rate rendering clamping
+          if (timestamp >= this.animation.renderStartTime) {
+            //Update the current logic frame and render with
+            //interpolation
+            this.interpolate(); //Reset the frame render start time
+
+            this.animation.renderStartTime = timestamp + this.animation.renderDuration;
+          }
         }
       }
     } //The `interpolate` function updates the logic function at the
@@ -46535,7 +46605,6 @@ function () {
   }, {
     key: "keyBinds",
     value: function keyBinds(keyCode) {
-      console.log(keyCode);
       var key = {};
       key.code = keyCode;
       key.isDown = false;
@@ -46610,8 +46679,45 @@ function () {
         controls[binds[i].key] = this.keyBinds(binds[i].bind);
       }
 
-      log(controls);
       return controls;
+    } //The contain helper function
+
+  }, {
+    key: "setCollision",
+    value: function setCollision(sprite, container) {
+      //Create a set called `collision` to keep track of the
+      //boundaries with which the sprite is colliding
+      return function () {
+        var collision = new Set(); // X
+
+        if (sprite.x < container.left) {
+          sprite.x = container.left;
+          collision.add("left");
+        } // Y
+
+
+        if (sprite.y < container.top) {
+          sprite.y = container.top;
+          collision.add("top");
+        } // Width
+
+
+        if (sprite.x + sprite.width > container.right) {
+          sprite.x = container.right - sprite.width;
+          collision.add("right");
+        } // Height
+
+
+        if (sprite.y + sprite.height > container.bottom) {
+          sprite.y = container.bottom - sprite.height;
+          collision.add("bottom");
+        } //If there were no collisions, set `collision` to `undefined`
+
+
+        if (collision.size === 0) collision = undefined; //Return the `collision` value
+
+        return collision;
+      };
     }
   }]);
 

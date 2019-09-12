@@ -8,7 +8,8 @@ var args = [
 	'color: #55c3dc; background: #030307; padding:5px 0;',
 	'background: #0066a5; padding:5px 0;',
 	'background: #aaaabf; padding:5px 0;',
-	'background: #0066a5; padding:5px 0;'];
+	'background: #0066a5; padding:5px 0;'
+];
 
 
 export default class Animate {
@@ -50,6 +51,7 @@ export default class Animate {
 		let batchName = options.batchName || 'batchImage';
 		// Get a selection of items
 		let batch = options.batch;
+		let baseTexture = batch && batch.baseTexture;
 		let prefix = batch && batch.textureKey;
 		// Get unordered items
 		let list = batch && batch.list;
@@ -58,41 +60,39 @@ export default class Animate {
 		// batch container
 		let count = 0;
 		let sprites = {}
-		sprites[batchName] = {}
+		let spritesArr = sprites[batchName] = []
+
+		let setSprite = (texture, i) => {
+			// let batchKey = key || `${batchName.toLowerCase()}_${i}`;
+			// let [batchKey] = new this.engine.Sprite(texture);
+			spritesArr.push(new this.engine.Sprite(texture));
+			if (baseTexture)
+				spritesArr[i].texture.baseTexture.scaleMode = this.engine.SCALE_MODES.NEAREST;
+			if (batch.forEach)
+				batch.forEach(spritesArr[i], i);
+			count++;
+		};
 
 		if (batch) {
 			if (prefix && list && list.length) {
 				for (let i = 0, len = list.length; i < len; i++) {
 					let key = `${prefix}${list[i]}`;
 					if (textures.hasOwnProperty(key)) {
-						let batchKey = `${batchName.toLowerCase()}_${i}`;
-						sprites[batchName][batchKey] = new this.engine.Sprite(textures[key]);
-						if (batch.forEach) {
-							batch.forEach(sprites[batchName][batchKey], count++);
-						}
+						setSprite(textures[key], count);
 					}
 				}
 			} else if (prefix && range && range.length == 2) {
 				for (let i = range[0], len = range[1]; i <= len; i++) {
 					let key = `${prefix}${i}`;
 					if (textures.hasOwnProperty(key)) {
-						let batchKey = `${batchName.toLowerCase()}_${count}`;
-						sprites[batchName][batchKey] = new this.engine.Sprite(textures[key]);
-						if (batch.forEach) {
-							batch.forEach(sprites[batchName][batchKey], count);
-						}
-						count++;
+						setSprite(textures[key], count);
 					}
 				}
 			}
 		} else {
 			for (const key in textures) {
 				if (textures.hasOwnProperty(key)) {
-					sprites[batchName][key] = new this.engine.Sprite(textures[key]);
-					if (batch.forEach) {
-						batch.forEach(sprites[batchName][batchKey], count);
-					}
-					count++;
+					setSprite(textures[key], count);
 				}
 			}
 		}
@@ -100,7 +100,8 @@ export default class Animate {
 		return sprites[batchName];
 	}
 
-	textureAtlas(prefix, mapWidth, mapHeight, countX, countY, totalCount) {
+	getTextureAtlas(prefix, mapWidth, mapHeight, countX, countY, totalCount) {
+		// log(FN.getTextureAtlas('font',300,160,15,8),1,true);
 		log('textureAtlas():', 2);
 		let tileW = mapWidth / countX;
 		let tileY = mapHeight / countY;
@@ -129,25 +130,34 @@ export default class Animate {
 			version: "1.0",
 			image: prefix + ".png",
 			format: "RGBA8888",
-			size: { "w": mapWidth, "h": mapHeight },
+			size: {
+				"w": mapWidth,
+				"h": mapHeight
+			},
 			scale: "1"
 		}
-		return atlas;
+		return JSON.stringify(atlas);
 	}
 
 	pauseAnimation() {
-		this.animation.pause = true;
+		this.animation.pause = !this.animation.pause;
 	}
 
 	startAnimation(options) {
 		let start = performance.timing.navigationStart + performance.now();
-		this.animation.fpsInterval = 1000 / options.fps;
+		this.animation.fpsInterval = 1000 / options.logicFps;
 		this.animation.update = options.update;
-		this.animation.fps = options.fps;
-		this.animation.lag = 0;
-		this.animation.pause = false;
-		this.animation.interpolate = true;
+		this.animation.fps = options.logicFps;
 		this.animation.startTime = start;
+		this.animation.lag = 0;
+		this.animation.interpolate = true;
+		this.animation.pause = false;
+
+		// Reneder clamping
+		this.animation.renderStartTime = 0;
+		this.animation.renderFps = options.renderFps;
+		this.animation.renderDuration = 1000 / options.renderFps;
+
 		this.animation.properties.position = true;
 		this.animation.properties.rotation = true;
 		this.animation.properties.alpha = true;
@@ -155,11 +165,10 @@ export default class Animate {
 		this.animation.properties.size = true;
 		this.animation.properties.tile = true;
 		this.animate();
-		log(`startAnimation(): fps: ${options.fps} duration: ${1000 / options.fps}ms`, 5, true);
 	}
 
-	animate() {
-		requestAnimationFrame(this.animate);
+	animate(timestamp) {
+		requestAnimationFrame(this.animate.bind(this));
 		if (!this.animation.pause) {
 			// log('ANIMATE', 3, true)
 			//If the `fps` hasn't been defined, call the user-defined update
@@ -170,8 +179,19 @@ export default class Animate {
 				//game at the maxium frame rate your system is capable of
 				this.animation.update();
 				this.renderer.render(this.stage);
-			} else {
+			} else if (!this.animation.renderFps) {
 				this.interpolate();
+			} else {
+				//Implement optional frame rate rendering clamping
+				if (timestamp >= this.animation.renderStartTime) {
+
+					//Update the current logic frame and render with
+					//interpolation
+					this.interpolate();
+
+					//Reset the frame render start time
+					this.animation.renderStartTime = timestamp + this.animation.renderDuration;
+				}
 			}
 		}
 	}
@@ -489,7 +509,6 @@ export default class Animate {
 	}
 
 	keyBinds(keyCode) {
-		console.log(keyCode);
 		let key = {};
 		key.code = keyCode;
 		key.isDown = false;
@@ -532,15 +551,78 @@ export default class Animate {
 		let binds = [],
 			controls = {};
 		if (defaultKeys.arrows) {
-			binds = [{ key: 'left', bind: 37 }, { key: 'up', bind: 38 }, { key: 'right', bind: 39 }, { key: 'down', bind: 40 }];
+			binds = [{
+				key: 'left',
+				bind: 37
+			}, {
+				key: 'up',
+				bind: 38
+			}, {
+				key: 'right',
+				bind: 39
+			}, {
+				key: 'down',
+				bind: 40
+			}];
 		} else {
-			binds = [{ key: 'left', bind: 65 }, { key: 'up', bind: 87 }, { key: 'right', bind: 68 }, { key: 'down', bind: 83 }];
+			binds = [{
+				key: 'left',
+				bind: 65
+			}, {
+				key: 'up',
+				bind: 87
+			}, {
+				key: 'right',
+				bind: 68
+			}, {
+				key: 'down',
+				bind: 83
+			}];
 		}
 
 		for (let i = 0, len = binds.length; i < len; i++) {
 			controls[binds[i].key] = this.keyBinds(binds[i].bind);
 		}
-		log(controls)
 		return controls
+	}
+
+	//The contain helper function
+	setCollision(sprite, container) {
+
+		//Create a set called `collision` to keep track of the
+		//boundaries with which the sprite is colliding
+		return function () {
+			var collision = new Set();
+
+			// X
+			if (sprite.x < container.left) {
+				sprite.x = container.left;
+				collision.add("left");
+			}
+
+			// Y
+			if (sprite.y < container.top) {
+				sprite.y = container.top;
+				collision.add("top");
+			}
+
+			// Width
+			if (sprite.x + sprite.width > container.right) {
+				sprite.x = container.right - sprite.width;
+				collision.add("right");
+			}
+
+			// Height
+			if (sprite.y + sprite.height > container.bottom) {
+				sprite.y = container.bottom - sprite.height;
+				collision.add("bottom");
+			}
+
+			//If there were no collisions, set `collision` to `undefined`
+			if (collision.size === 0) collision = undefined;
+
+			//Return the `collision` value
+			return collision;
+		}
 	}
 }

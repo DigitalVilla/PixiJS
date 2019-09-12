@@ -4,7 +4,6 @@ import logger from './utils/logger';
 import '../sass/main.scss';
 
 const log = logger('PixiJS: ');
-let btn = document.getElementById('control');
 //Docs
 // http://pixijs.download/release/docs/PIXI.htm
 
@@ -18,61 +17,31 @@ let Container = PIXI.Container,
 //Create a container object called the `stage`
 let stage = new Container();
 //Create the renderer
-let renderer = autoRender({ width: screenY, height: screenX, backgroundColor: 0xDDDDDD });
+let renderer = autoRender({
+	width: screenY,
+	height: screenX,
+	backgroundColor: 0x223344
+});
 
 // initialize Helper Library
-const FN = new Animate({ renderer: renderer, engine: PIXI, stage: stage });
+const FN = new Animate({
+	renderer: renderer,
+	engine: PIXI,
+	stage: stage
+});
 //Add the canvas to the HTML document
 scene.appendChild(renderer.view);
 
 ///SPRITES
 const loader = new Loader();
 let girl = null;
+let state = true;
 const sprites = {};
 sprites.Girl = {};
-sprites.Font = {};
 
-loader.add('girlAtlas', "assets/girlAtlas.json")
-	.add('fontAtlas', "assets/fontAtlas.json");
-
+loader.add('girlAtlas', "assets/girlAtlas.json");
 loader.load((loader, resources) => {
 	log('loader', 5)
-
-	sprites.Font.Numeric = FN.frameBatch({
-		textures: resources.fontAtlas.textures,
-		batchName: 'Num',
-		baseTexture:true,
-		batch: {
-			textureKey: 'font_',
-			range: [16, 25],
-			forEach: function (sprite, i) {
-				sprite.x = i * sprite.width + (10 * i);
-				//`xOffset` determines the point from the left of the screen
-				sprite.scale.set(2)
-				//Add the sprite to the stage
-				stage.addChild(sprite);
-			}
-		}
-	});
-
-	sprites.Font.Alpha = FN.frameBatch({
-		textures: resources.fontAtlas.textures,
-		batchName: 'Alpha',
-		batch: {
-			baseTexture:true,
-			textureKey: 'font_',
-			range: [33, 58],
-			forEach: function (sprite, i) {
-				sprite.x = i * sprite.width + (1 * i);
-				sprite.y = 100;
-				//`xOffset` determines the point from the left of the screen
-				sprite.scale.set(2)
-				//Add the sprite to the stage
-				stage.addChild(sprite);
-			}
-		}
-	});
-
 	sprites.Girl.Walk = FN.frameBatch({
 		textures: resources.girlAtlas.textures,
 		batchName: 'Walk',
@@ -99,8 +68,9 @@ loader.load((loader, resources) => {
 			}
 		}
 	});
+	girl = sprites.Girl.Walk.walk_0;
 
-	girl = sprites.Girl.Walk[0];
+
 	const key = FN.keyBinding({ arrows: true });
 
 	//Left arrow key `press` method
@@ -156,7 +126,6 @@ loader.load((loader, resources) => {
 	});
 });
 
-// log(FN.getTextureAtlas('font', 300, 160, 15, 8), 1, true);
 // Game logic
 function main() {
 	let collision = girl.getCollision();
@@ -166,8 +135,6 @@ function main() {
 	girl.vy *= girl.frictionY;
 	girl.x += girl.vx;
 	girl.y += girl.vy;
-
-	girl.y += 0.8;
 
 	//Check for a collision. If the value of `collision` isn't
 	//`undefined` then you know the sprite hit a boundary
@@ -183,8 +150,6 @@ function main() {
 		}
 	}
 }
-
-btn.addEventListener('click', () => FN.pauseAnimation())
 
 //responsive directives
 renderer.view.style.position = "absolute";
