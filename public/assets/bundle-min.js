@@ -45908,126 +45908,109 @@ var FN = new _utils_FN__WEBPACK_IMPORTED_MODULE_1__["default"]({
 scene.appendChild(renderer.view); ///SPRITES
 
 var loader = new Loader();
-var girl = null;
-var sprites = {};
-sprites.Girl = {};
-sprites.Font = {};
-loader.add('girlAtlas', "assets/girlAtlas.json").add('fontAtlas', "assets/fontAtlas.json");
+var digits = {};
+var pixi = {};
+loader.add('tileset', "assets/tilesetAtlas.json");
 loader.load(function (loader, resources) {
   log('loader', 5);
-  sprites.Font.Numeric = FN.frameBatch({
-    textures: resources.fontAtlas.textures,
-    batchName: 'Num',
+  pixi = FN.frameAtlas({
+    textures: resources.tileset.textures,
+    batch: {
+      list: [128, 129, 130, 144, 145, 146, 160, 161, 162, 176, 177, 178]
+    },
+    isAnimation: true,
+    addStatePlayer: true,
     baseTexture: true,
-    batch: {
-      textureKey: 'font_',
-      range: [16, 25],
-      forEach: function forEach(sprite, i) {
-        sprite.x = i * sprite.width + 10 * i; //`xOffset` determines the point from the left of the screen
+    setStates: {
+      down: 0,
+      walkDown: [0, 2],
+      left: 3,
+      walkLeft: [3, 5],
+      right: 6,
+      walkRight: [6, 8],
+      up: 9,
+      walkUp: [9, 11]
+    } // between:2,
 
-        sprite.scale.set(2); //Add the sprite to the stage
+  }); // pixi.play();
 
-        stage.addChild(sprite);
-      }
-    }
+  pixi.animationSpeed = .25;
+  pixi.scale.set(2);
+  console.log(pixi.fps = 10);
+  pixi.getCollision = FN.setCollision(pixi, {
+    left: 0,
+    top: 0,
+    right: screenX,
+    bottom: screenY
   });
-  sprites.Font.Alpha = FN.frameBatch({
-    textures: resources.fontAtlas.textures,
-    batchName: 'Alpha',
-    batch: {
-      baseTexture: true,
-      textureKey: 'font_',
-      range: [33, 58],
-      forEach: function forEach(sprite, i) {
-        sprite.x = i * sprite.width + 1 * i;
-        sprite.y = 100; //`xOffset` determines the point from the left of the screen
-
-        sprite.scale.set(2); //Add the sprite to the stage
-
-        stage.addChild(sprite);
-      }
-    }
-  });
-  sprites.Girl.Walk = FN.frameBatch({
-    textures: resources.girlAtlas.textures,
-    batchName: 'Walk',
-    batch: {
-      textureKey: 'girl_',
-      list: [11],
-      forEach: function forEach(sprite, i) {
-        sprite.getCollision = FN.setCollision(sprite, {
-          left: -40,
-          top: -10,
-          right: screenX + 45,
-          bottom: screenY + 15
-        });
-        sprite.accelerationX = 0;
-        sprite.accelerationY = 0;
-        sprite.frictionX = 1;
-        sprite.frictionY = 1;
-        sprite.speed = 0.2;
-        sprite.drag = 0.6;
-        sprite.vx = 0;
-        sprite.vy = 0;
-        sprite.x = 0;
-        sprite.y = 400; //`xOffset` determines the point from the left of the screen
-
-        sprite.scale.set(2); //Add the sprite to the stage
-
-        stage.addChild(sprite);
-      }
-    }
-  });
-  girl = sprites.Girl.Walk[0];
+  pixi.vx = 0;
+  pixi.vy = 0;
+  pixi.x = 300;
+  pixi.y = 300;
+  stage.addChild(pixi);
   var key = FN.keyBinding({
     arrows: true
   }); //Left arrow key `press` method
 
   key.left.press = function () {
-    girl.accelerationX = -girl.speed;
-    girl.frictionX = 1;
-  };
+    //Play the sprite's `walkLeft` animation
+    //sequence and set the sprite's velocity
+    pixi.playAnimation(pixi.states.walkLeft);
+    pixi.vx = -10;
+    pixi.vy = 0;
+  }; //Left arrow key `release` method
+
 
   key.left.release = function () {
-    if (!key.right.isDown) {
-      girl.accelerationX = 0;
-      girl.frictionX = girl.drag;
+    //If the left arrow has been released, and the right arrow isn't down,
+    //and the sprite isn't moving vertically, stop the sprite from moving
+    //by setting its velocity to zero. Then display the sprite's static
+    //`left` state.
+    if (!key.right.isDown && pixi.vy === 0) {
+      pixi.vx = 0;
+      pixi.show(pixi.states.left);
     }
-  };
+  }; //Up
+
 
   key.up.press = function () {
-    girl.accelerationY = -girl.speed;
-    girl.frictionY = 1;
+    pixi.playAnimation(pixi.states.walkUp);
+    pixi.vy = -10;
+    pixi.vx = 0;
   };
 
   key.up.release = function () {
-    if (!key.down.isDown) {
-      girl.accelerationY = 0;
-      girl.frictionY = girl.drag;
+    if (!key.down.isDown && pixi.vx === 0) {
+      pixi.vy = 0;
+      pixi.show(pixi.states.up);
     }
-  };
+  }; //Right
+
 
   key.right.press = function () {
-    girl.accelerationX = girl.speed;
-    girl.frictionX = 1;
+    pixi.playAnimation(pixi.states.walkRight);
+    pixi.vx = 10;
+    pixi.vy = 0;
   };
 
   key.right.release = function () {
-    if (!key.left.isDown) {
-      girl.accelerationX = 0;
-      girl.frictionX = girl.drag;
+    if (!key.left.isDown && pixi.vy === 0) {
+      pixi.vx = 0;
+      pixi.show(pixi.states.right);
     }
-  };
+  }; //Down
+
 
   key.down.press = function () {
-    girl.accelerationY = girl.speed;
-    girl.frictionY = 1;
+    pixi.playAnimation(pixi.states.walkDown);
+    pixi.vy = 10;
+    pixi.vx = 0;
   };
 
   key.down.release = function () {
-    if (!key.up.isDown) {
-      girl.accelerationY = 0;
-      girl.frictionY = girl.drag;
+    if (!key.up.isDown && pixi.vx === 0) {
+      pixi.vy = 0;
+      pixi.show(pixi.states.down);
     }
   };
 
@@ -46039,25 +46022,19 @@ loader.load(function (loader, resources) {
 // Game logic
 
 function main() {
-  var collision = girl.getCollision();
-  girl.vx += girl.accelerationX;
-  girl.vy += girl.accelerationY;
-  girl.vx *= girl.frictionX;
-  girl.vy *= girl.frictionY;
-  girl.x += girl.vx;
-  girl.y += girl.vy;
-  girl.y += 0.8; //Check for a collision. If the value of `collision` isn't
+  var collision = pixi.getCollision();
+  pixi.x += pixi.vx;
+  pixi.y += pixi.vy; // pixi.y += 0.8;
+  //Check for a collision. If the value of `collision` isn't
   //`undefined` then you know the sprite hit a boundary
 
   if (collision) {
     //Reverse the sprite's `vx` value if it hits the left or right
-    if (collision.has("left") || collision.has("right")) {
-      girl.vx = -girl.vx;
-    } //Reverse the sprite's `vy` value if it hits the top or bottom
+    if (collision.has("left") || collision.has("right")) {} // pixi.vx = -pixi.vx;
+    //Reverse the sprite's `vy` value if it hits the top or bottom
 
 
-    if (collision.has("top") || collision.has("bottom")) {
-      girl.vy = -(girl.vy * .5);
+    if (collision.has("top") || collision.has("bottom")) {// pixi.vy = -(pixi.vy * .5);
     }
   }
 }
@@ -46100,7 +46077,7 @@ function () {
   function Animate(options) {
     _classCallCheck(this, Animate);
 
-    console.log.apply(console, args);
+    // console.log.apply(console, args);
     this.stage = options.stage;
     this.engine = options.engine;
     this.renderer = options.renderer;
@@ -46119,46 +46096,65 @@ function () {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
   }, {
-    key: "singleFrame",
-    value: function singleFrame(texture, tileWidth, tileHeight, xIndex, yIndex) {
+    key: "frameSingle",
+    value: function frameSingle(texture, tileWidth, tileHeight, xIndex, yIndex) {
       log('singleFrame():', 2);
       var x = xIndex * tileWidth;
       var y = yIndex * tileHeight; //size of the sub-image you want to extract from the texture
 
-      var rectangle = new this.engine.Rectangle(x, y, tileWidth, tileHeight); //Tell the texture to use that rectangular section
+      var imageFrame = new this.engine.Rectangle(x, y, tileWidth, tileHeight); //Tell the texture to use that rectangular section
 
-      texture.frame = rectangle; //Return the sprite from the texture
+      texture.frame = imageFrame; //Return the sprite from the texture
 
       return new this.engine.Sprite(texture);
     }
   }, {
-    key: "frameBatch",
-    value: function frameBatch(options) {
+    key: "frameStrip",
+    value: function frameStrip(texture, xIndex, yIndex) {/// to be implemented
+
+      var spacing = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+    }
+  }, {
+    key: "frameAtlas",
+    value: function frameAtlas(options) {
       var _this = this;
 
-      log('frameBatch():', 2);
-      var textures = options.textures; // Name of this new batch
-
-      var batchName = options.batchName || 'batchImage'; // Get a selection of items
+      log('frameAtlas():', 2);
+      var isAnimation = options.isAnimation;
+      var addStatePlayer = options.addStatePlayer;
+      var states = options.setStates;
+      var between = options.between || 1;
+      var textures = options.textures; // Get a selection of items
 
       var batch = options.batch;
-      var baseTexture = batch && batch.baseTexture;
-      var prefix = batch && batch.textureKey; // Get unordered items
+      var baseTexture = options.baseTexture; // Get unordered items
 
       var list = batch && batch.list; // Get order items
 
       var range = batch && batch.range; // batch container
 
       var count = 0;
-      var sprites = {};
-      var spritesArr = sprites[batchName] = [];
+      var spritesArr = [];
+      var prefix = batch && textures[Object.keys(textures)[0]].textureCacheIds[0];
+      prefix = prefix && prefix.slice(0, prefix.indexOf('0'));
 
       var setSprite = function setSprite(texture, i) {
-        // let batchKey = key || `${batchName.toLowerCase()}_${i}`;
-        // let [batchKey] = new this.engine.Sprite(texture);
-        spritesArr.push(new _this.engine.Sprite(texture));
-        if (baseTexture) spritesArr[i].texture.baseTexture.scaleMode = _this.engine.SCALE_MODES.NEAREST;
-        if (batch.forEach) batch.forEach(spritesArr[i], i);
+        if (isAnimation) {
+          for (var _i = 0; _i < between; _i++) {
+            spritesArr.push(texture);
+          }
+        } else {
+          spritesArr.push(new _this.engine.Sprite(texture));
+        }
+
+        if (baseTexture) {
+          spritesArr[i].baseTexture.scaleMode = _this.engine.SCALE_MODES.NEAREST;
+        }
+
+        if (!isAnimation && batch.forEach) {
+          batch.forEach(spritesArr[i], i);
+        }
+
         count++;
       };
 
@@ -46172,8 +46168,8 @@ function () {
             }
           }
         } else if (prefix && range && range.length == 2) {
-          for (var _i = range[0], _len = range[1]; _i <= _len; _i++) {
-            var _key = "".concat(prefix).concat(_i);
+          for (var _i2 = range[0], _len = range[1]; _i2 <= _len; _i2++) {
+            var _key = "".concat(prefix).concat(_i2);
 
             if (textures.hasOwnProperty(_key)) {
               setSprite(textures[_key], count);
@@ -46188,13 +46184,133 @@ function () {
         }
       }
 
-      return sprites[batchName];
+      spritesArr = isAnimation ? new this.engine.AnimatedSprite(spritesArr) : spritesArr;
+      return addStatePlayer ? this.addStatePlayer(spritesArr, states) : spritesArr;
     }
   }, {
-    key: "getTextureAtlas",
-    value: function getTextureAtlas(prefix, mapWidth, mapHeight, countX, countY, totalCount) {
+    key: "addStatePlayer",
+    value: function addStatePlayer(sprite, states) {
+      var frameCounter = 0,
+          numberOfFrames = 0,
+          startFrame = 0,
+          endFrame = 0,
+          timerInterval = undefined; //The `show` function (to display static states)
+
+      function show(frameNumber) {
+        //Reset any possible previous animations
+        reset(); //Find the new state on the sprite
+
+        sprite.gotoAndStop(frameNumber);
+      } //The `stop` function stops the animation at the current frame
+
+
+      function stopAnimation() {
+        reset();
+        sprite.gotoAndStop(sprite.currentFrame);
+      } //The `playSequence` function, to play a sequence of frames
+
+
+      function playAnimation(sequenceArray) {
+        //Reset any possible previous animations
+        reset(); //Figure out how many frames there are in the range
+
+        if (!sequenceArray) {
+          startFrame = 0;
+          endFrame = sprite.totalFrames - 1;
+        } else {
+          startFrame = sequenceArray[0];
+          endFrame = sequenceArray[1];
+        } //Calculate the number of frames
+
+
+        numberOfFrames = endFrame - startFrame; //Compensate for two edge cases:
+        //1. If the `startFrame` happens to be `0`
+
+        /*
+        if (startFrame === 0) {
+          numberOfFrames += 1;
+          frameCounter += 1;
+        }
+        */
+        //2. If only a two-frame sequence was provided
+
+        /*
+        if(numberOfFrames === 1) {
+          numberOfFrames = 2;
+          frameCounter += 1;
+        }
+        */
+        //Calculate the frame rate. Set the default fps to 12
+
+        if (!sprite.fps) sprite.fps = 12;
+        var frameRate = 1000 / sprite.fps; //Set the sprite to the starting frame
+
+        sprite.gotoAndStop(startFrame); //Set the `frameCounter` to the first frame
+
+        frameCounter = 1; //If the state isn't already `playing`, start it
+
+        if (!sprite.animating) {
+          timerInterval = setInterval(advanceFrame.bind(this), frameRate);
+          sprite.animating = true;
+        }
+      } //`advanceFrame` is called by `setInterval` to display the next frame
+      //in the sequence based on the `frameRate`. When the frame sequence
+      //reaches the end, it will either stop or loop
+
+
+      function advanceFrame() {
+        //Advance the frame if `frameCounter` is less than
+        //the state's total frames
+        if (frameCounter < numberOfFrames + 1) {
+          //Advance the frame
+          sprite.gotoAndStop(sprite.currentFrame + 1); //Update the frame counter
+
+          frameCounter += 1; //If we've reached the last frame and `loop`
+          //is `true`, then start from the first frame again
+        } else {
+          if (sprite.loop) {
+            sprite.gotoAndStop(startFrame);
+            frameCounter = 1;
+          }
+        }
+      }
+
+      function reset() {
+        //Reset `sprite.playing` to `false`, set the `frameCounter` to 0, //and clear the `timerInterval`
+        if (timerInterval !== undefined && sprite.animating === true) {
+          sprite.animating = false;
+          frameCounter = 0;
+          startFrame = 0;
+          endFrame = 0;
+          numberOfFrames = 0;
+          clearInterval(timerInterval);
+        }
+      } //Add the `show`, `play`, `stop`, and `playSequence` methods to the sprite
+
+
+      sprite.show = show;
+      sprite.stopAnimation = stopAnimation;
+      sprite.playAnimation = playAnimation; //set states
+
+      if (states) {
+        sprite.states = {};
+
+        for (var key in states) {
+          if (states.hasOwnProperty(key)) {
+            sprite.states[key] = states[key];
+          }
+        }
+      }
+
+      return sprite;
+    }
+  }, {
+    key: "makeTextureAtlas",
+    value: function makeTextureAtlas(prefix, texture, countX, countY, totalCount) {
       // log(FN.getTextureAtlas('font',300,160,15,8),1,true);
       log('textureAtlas():', 2);
+      var mapWidth = texture.orig.width;
+      var mapHeight = texture.orig.height;
       var tileW = mapWidth / countX;
       var tileY = mapHeight / countY;
       totalCount = totalCount || countX * countY;

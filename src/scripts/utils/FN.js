@@ -14,7 +14,7 @@ var args = [
 
 export default class Animate {
 	constructor(options) {
-		console.log.apply(console, args);
+		// console.log.apply(console, args);
 		this.stage = options.stage;
 		this.engine = options.engine;
 		this.renderer = options.renderer;
@@ -32,44 +32,56 @@ export default class Animate {
 		return Math.floor(Math.random() * (max - min + 1)) + min;
 	}
 
-	singleFrame(texture, tileWidth, tileHeight, xIndex, yIndex) {
+	frameSingle(texture, tileWidth, tileHeight, xIndex, yIndex) {
 		log('singleFrame():', 2);
 		let x = xIndex * tileWidth;
 		let y = yIndex * tileHeight;
 		//size of the sub-image you want to extract from the texture
-		let rectangle = new this.engine.Rectangle(x, y, tileWidth, tileHeight);
+		let imageFrame = new this.engine.Rectangle(x, y, tileWidth, tileHeight);
 		//Tell the texture to use that rectangular section
-		texture.frame = rectangle;
+		texture.frame = imageFrame;
 		//Return the sprite from the texture
 		return new this.engine.Sprite(texture);
 	}
 
-	frameBatch(options) {
-		log('frameBatch():', 2);
+	frameStrip(texture, xIndex, yIndex, spacing = 0) {
+		/// to be implemented
+	}
+
+	frameAtlas(options) {
+		log('frameAtlas():', 2);
+		let isAnimation = options.isAnimation;
+		let addStatePlayer = options.addStatePlayer;
+		let states = options.setStates;
+		let between = options.between || 1;
 		let textures = options.textures;
-		// Name of this new batch
-		let batchName = options.batchName || 'batchImage';
 		// Get a selection of items
 		let batch = options.batch;
-		let baseTexture = batch && batch.baseTexture;
-		let prefix = batch && batch.textureKey;
+		let baseTexture = options.baseTexture;
 		// Get unordered items
 		let list = batch && batch.list;
 		// Get order items
 		let range = batch && batch.range;
 		// batch container
 		let count = 0;
-		let sprites = {}
-		let spritesArr = sprites[batchName] = []
+		let spritesArr = [];
+		let prefix = batch && textures[Object.keys(textures)[0]].textureCacheIds[0];
+		prefix = prefix && prefix.slice(0, prefix.indexOf('0'));
 
 		let setSprite = (texture, i) => {
-			// let batchKey = key || `${batchName.toLowerCase()}_${i}`;
-			// let [batchKey] = new this.engine.Sprite(texture);
-			spritesArr.push(new this.engine.Sprite(texture));
-			if (baseTexture)
-				spritesArr[i].texture.baseTexture.scaleMode = this.engine.SCALE_MODES.NEAREST;
-			if (batch.forEach)
+			if (isAnimation) {
+				for (let i = 0; i < between; i++) {
+					spritesArr.push(texture);
+				}
+			} else {
+				spritesArr.push(new this.engine.Sprite(texture));
+			}
+			if (baseTexture) {
+				spritesArr[i].baseTexture.scaleMode = this.engine.SCALE_MODES.NEAREST;
+			}
+			if (!isAnimation && batch.forEach) {
 				batch.forEach(spritesArr[i], i);
+			}
 			count++;
 		};
 
@@ -97,12 +109,145 @@ export default class Animate {
 			}
 		}
 
-		return sprites[batchName];
+		spritesArr = isAnimation ? new this.engine.AnimatedSprite(spritesArr) : spritesArr;
+		return addStatePlayer ? this.addStatePlayer(spritesArr, states) : spritesArr;
 	}
 
-	getTextureAtlas(prefix, mapWidth, mapHeight, countX, countY, totalCount) {
+	addStatePlayer(sprite, states) {
+		let frameCounter = 0,
+			numberOfFrames = 0,
+			startFrame = 0,
+			endFrame = 0,
+			timerInterval = undefined;
+
+		//The `show` function (to display static states)
+		function show(frameNumber) {
+
+			//Reset any possible previous animations
+			reset();
+
+			//Find the new state on the sprite
+			sprite.gotoAndStop(frameNumber);
+		}
+
+		//The `stop` function stops the animation at the current frame
+		function stopAnimation() {
+			reset();
+			sprite.gotoAndStop(sprite.currentFrame);
+		}
+
+		//The `playSequence` function, to play a sequence of frames
+		function playAnimation(sequenceArray) {
+
+			//Reset any possible previous animations
+			reset();
+
+			//Figure out how many frames there are in the range
+			if (!sequenceArray) {
+				startFrame = 0;
+				endFrame = sprite.totalFrames - 1;
+			} else {
+				startFrame = sequenceArray[0];
+				endFrame = sequenceArray[1];
+			}
+
+			//Calculate the number of frames
+			numberOfFrames = endFrame - startFrame;
+
+			//Compensate for two edge cases:
+			//1. If the `startFrame` happens to be `0`
+			/*
+			if (startFrame === 0) {
+			  numberOfFrames += 1;
+			  frameCounter += 1;
+			}
+			*/
+
+			//2. If only a two-frame sequence was provided
+			/*
+			if(numberOfFrames === 1) {
+			  numberOfFrames = 2;
+			  frameCounter += 1;
+			}
+			*/
+
+			//Calculate the frame rate. Set the default fps to 12
+			if (!sprite.fps) sprite.fps = 12;
+			let frameRate = 1000 / sprite.fps;
+
+			//Set the sprite to the starting frame
+			sprite.gotoAndStop(startFrame);
+
+			//Set the `frameCounter` to the first frame
+			frameCounter = 1;
+
+			//If the state isn't already `playing`, start it
+			if (!sprite.animating) {
+				timerInterval = setInterval(advanceFrame.bind(this), frameRate);
+				sprite.animating = true;
+			}
+		}
+
+		//`advanceFrame` is called by `setInterval` to display the next frame
+		//in the sequence based on the `frameRate`. When the frame sequence
+		//reaches the end, it will either stop or loop
+		function advanceFrame() {
+
+			//Advance the frame if `frameCounter` is less than
+			//the state's total frames
+			if (frameCounter < numberOfFrames + 1) {
+
+				//Advance the frame
+				sprite.gotoAndStop(sprite.currentFrame + 1);
+
+				//Update the frame counter
+				frameCounter += 1;
+
+				//If we've reached the last frame and `loop`
+				//is `true`, then start from the first frame again
+			} else {
+				if (sprite.loop) {
+					sprite.gotoAndStop(startFrame);
+					frameCounter = 1;
+				}
+			}
+		}
+
+		function reset() {
+
+			//Reset `sprite.playing` to `false`, set the `frameCounter` to 0, //and clear the `timerInterval`
+			if (timerInterval !== undefined && sprite.animating === true) {
+				sprite.animating = false;
+				frameCounter = 0;
+				startFrame = 0;
+				endFrame = 0;
+				numberOfFrames = 0;
+				clearInterval(timerInterval);
+			}
+		}
+
+		//Add the `show`, `play`, `stop`, and `playSequence` methods to the sprite
+		sprite.show = show;
+		sprite.stopAnimation = stopAnimation;
+		sprite.playAnimation = playAnimation;
+
+		//set states
+		if (states) {
+			sprite.states = {};
+			for (const key in states) {
+				if (states.hasOwnProperty(key)) {
+					sprite.states[key] = states[key];
+				}
+			}
+		}
+		return sprite
+	}
+
+	makeTextureAtlas(prefix, texture, countX, countY, totalCount) {
 		// log(FN.getTextureAtlas('font',300,160,15,8),1,true);
 		log('textureAtlas():', 2);
+		let mapWidth = texture.orig.width;
+		let mapHeight = texture.orig.height;
 		let tileW = mapWidth / countX;
 		let tileY = mapHeight / countY;
 		totalCount = totalCount || countX * countY;
@@ -114,12 +259,28 @@ export default class Animate {
 			for (let x = 0; x < countX; x++) {
 				if (count === totalCount) break;
 				atlas.frames[`${prefix}_${count}`] = {
-					frame: { x: x * tileW, y: y * tileY, w: tileW, h: tileY },
+					frame: {
+						x: x * tileW,
+						y: y * tileY,
+						w: tileW,
+						h: tileY
+					},
 					rotate: false,
 					trimmed: false,
-					spriteSourceSize: { x: 0, y: 0, w: tileW, h: tileY },
-					sourceSize: { w: tileW, h: tileY },
-					pivot: { x: 0.5, y: 0.5 }
+					spriteSourceSize: {
+						x: 0,
+						y: 0,
+						w: tileW,
+						h: tileY
+					},
+					sourceSize: {
+						w: tileW,
+						h: tileY
+					},
+					pivot: {
+						x: 0.5,
+						y: 0.5
+					}
 				}
 				count++;
 			}

@@ -35,43 +35,87 @@ scene.appendChild(renderer.view);
 
 ///SPRITES
 const loader = new Loader();
+const sprites = {};
+let girl = {};
 let digits = {};
 let pixi = {};
 
-loader.add('tileset', "assets/tilesetAtlas.json");
+loader.add('girlAtlas', "assets/girlAtlas.json")
+	.add('tileset', "assets/tilesetAtlas.json")
+	.add('fontAtlas', "assets/fontAtlas.json");
 
 loader.load((loader, resources) => {
 	log('loader', 5)
 
-	pixi = FN.frameAtlas({
-		textures: resources.tileset.textures,
-		batch: { list: [128, 129, 130, 144, 145, 146, 160, 161, 162, 176, 177, 178] },
+	girl = sprites.GirlWalk = FN.frameAtlas({
+		textures: resources.girlAtlas.textures,
+		batch: { list: [0, 1, 1, 1, 2, 3, 3, 3, 4] },
 		isAnimation: true,
 		addStatePlayer: true,
-		baseTexture: true,
 		setStates: {
-			down: 0, walkDown: [0, 2],
-			left: 3, walkLeft: [3, 5],
-			right: 6, walkRight: [6, 8],
-			up: 9, walkUp: [9, 11]
+
 		}
 		// between:2,
 	});
 
-	// pixi.play();
-	pixi.animationSpeed = .25;
+
+	pixi = sprites.GirlWalk = FN.frameAtlas({
+		textures: resources.tileset.textures,
+		batch: { list: [128,129,130,144,145,146,160,161,162,176,177,178] },
+		isAnimation: true,
+		addStatePlayer: true,
+		baseTexture:true,
+		setStates: {
+
+		}
+		// between:2,
+	});
+
+	pixi.play();
+	pixi.animationSpeed = 0.1;
+	pixi.position.set(100, 100)
 	pixi.scale.set(2)
-	console.log(pixi.fps = 10);
-
-
-	pixi.getCollision = FN.setCollision(pixi, { left: 0, top: 0, right: screenX, bottom: screenY });
-
-	pixi.vx = 0;
-	pixi.vy = 0;
-	pixi.x = 300;
-	pixi.y = 300;
-
 	stage.addChild(pixi);
+
+
+	digits = sprites.Numbers = FN.frameAtlas({
+		textures: resources.fontAtlas.textures,
+		isAnimation: true,
+		// baseTexture:true,
+		batch: { range: [16, 25] }
+	});
+
+
+	// girl.play();
+	girl.animationSpeed = .25;
+
+
+	girl.getCollision = FN.setCollision(girl, {
+		left: -40,
+		top: -10,
+		right: screenX + 45,
+		bottom: screenY + 15
+	});
+	girl.accelerationX = 0;
+	girl.accelerationY = 0;
+	girl.frictionX = 1;
+	girl.frictionY = 1;
+	girl.speed = 0.2;
+	girl.drag = 0.6;
+	girl.vx = 0;
+	girl.vy = 0;
+	girl.x = 0;
+	girl.y = 400;
+
+	stage.addChild(girl);
+
+	digits.play();
+	digits.animationSpeed = 0.1;
+	digits.position.set(10, 10)
+	digits.scale.set(2)
+
+	stage.addChild(digits);
+
 
 	const key = FN.keyBinding({
 		arrows: true
@@ -79,58 +123,50 @@ loader.load((loader, resources) => {
 
 	//Left arrow key `press` method
 	key.left.press = () => {
-		//Play the sprite's `walkLeft` animation
-		//sequence and set the sprite's velocity
-		pixi.playAnimation(pixi.states.walkLeft);
-		pixi.vx = -10;
-		pixi.vy = 0;
+		girl.accelerationX = -girl.speed;
+
+		girl.frictionX = 1;
 	};
-	//Left arrow key `release` method
+
 	key.left.release = () => {
-		//If the left arrow has been released, and the right arrow isn't down,
-		//and the sprite isn't moving vertically, stop the sprite from moving
-		//by setting its velocity to zero. Then display the sprite's static
-		//`left` state.
-		if (!key.right.isDown && pixi.vy === 0) {
-			pixi.vx = 0;
-			pixi.show(pixi.states.left);
+		if (!key.right.isDown) {
+			girl.accelerationX = 0;
+			girl.frictionX = girl.drag;
 		}
 	};
 
-	//Up
 	key.up.press = () => {
-		pixi.playAnimation(pixi.states.walkUp);
-		pixi.vy = -10;
-		pixi.vx = 0;
+		girl.accelerationY = -girl.speed;
+		girl.frictionY = 1;
+		girl.play();
 	};
 	key.up.release = () => {
-		if (!key.down.isDown && pixi.vx === 0) {
-			pixi.vy = 0;
-			pixi.show(pixi.states.up);
+		girl.stop();
+		if (!key.down.isDown) {
+			girl.accelerationY = 0;
+			girl.frictionY = girl.drag;
 		}
 	};
-	//Right
+
 	key.right.press = () => {
-		pixi.playAnimation(pixi.states.walkRight);
-		pixi.vx = 10;
-		pixi.vy = 0;
+		girl.accelerationX = girl.speed;
+		girl.frictionX = 1;
 	};
-	key.right.release = () => {
-		if (!key.left.isDown && pixi.vy === 0) {
-			pixi.vx = 0;
-			pixi.show(pixi.states.right);
+	key.right.release = function () {
+		if (!key.left.isDown) {
+			girl.accelerationX = 0;
+			girl.frictionX = girl.drag;
 		}
 	};
-	//Down
+
 	key.down.press = () => {
-		pixi.playAnimation(pixi.states.walkDown);
-		pixi.vy = 10;
-		pixi.vx = 0;
+		girl.accelerationY = girl.speed;
+		girl.frictionY = 1;
 	};
 	key.down.release = () => {
-		if (!key.up.isDown && pixi.vx === 0) {
-			pixi.vy = 0;
-			pixi.show(pixi.states.down);
+		if (!key.up.isDown) {
+			girl.accelerationY = 0;
+			girl.frictionY = girl.drag;
 		}
 	};
 
@@ -143,23 +179,27 @@ loader.load((loader, resources) => {
 // log(FN.getTextureAtlas('font', 300, 160, 15, 8), 1, true);
 // Game logic
 function main() {
-	let collision = pixi.getCollision();
-	pixi.x += pixi.vx;
-	pixi.y += pixi.vy;
+	let collision = girl.getCollision();
+	girl.vx += girl.accelerationX;
+	girl.vy += girl.accelerationY;
+	girl.vx *= girl.frictionX;
+	girl.vy *= girl.frictionY;
+	girl.x += girl.vx;
+	girl.y += girl.vy;
 
-	// pixi.y += 0.8;
+	girl.y += 0.8;
 
 	//Check for a collision. If the value of `collision` isn't
 	//`undefined` then you know the sprite hit a boundary
 	if (collision) {
 		//Reverse the sprite's `vx` value if it hits the left or right
 		if (collision.has("left") || collision.has("right")) {
-			// pixi.vx = -pixi.vx;
+			girl.vx = -girl.vx;
 		}
 
 		//Reverse the sprite's `vy` value if it hits the top or bottom
 		if (collision.has("top") || collision.has("bottom")) {
-			// pixi.vy = -(pixi.vy * .5);
+			girl.vy = -(girl.vy * .5);
 		}
 	}
 }
