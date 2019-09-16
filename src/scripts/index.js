@@ -8,9 +8,11 @@ import '../sass/main.scss';
 let Container = PIXI.Container,
 	autoRender = PIXI.autoDetectRenderer,
 	Loader = PIXI.Loader,
-	scene = document.getElementById('scene'),
-	btnPlay = document.getElementById('play'),
-	btnPause = document.getElementById('pause'),
+	$ = (id) => document.getElementById(id),
+	scene = $('scene'),
+	btnPlay = $('play'),
+	btnPause = $('pause'),
+	ctrl = $('controls'),
 	screenX = 720,
 	screenY = 480,
 	stage = new Container(),
@@ -24,7 +26,7 @@ let Container = PIXI.Container,
 // initialize helper libraries
 const log = logger('Index.JS: ');
 const anima = new Animate({ PIXI, stage, renderer });
-const loop = anima.loop({ update: main, logicFps: 30 });
+const loop = anima.loop({ update: main, logicFps: 24 });
 const spx = anima.spritex();
 
 //game varaables
@@ -39,10 +41,8 @@ loader.add('tileset', "assets/tilesetAtlas.json")
 
 loader.load((loader, resources) => {
 	log('loader', 5)
-
-	pixi = spx.frameAtlas({ textures: resources.girl.textures, baseTexture: true })
+	let pixiSprite = spx.frameAtlas({ textures: resources.girl.textures, baseTexture: true })
 		.makeAnimatedSprite().addStatePlayer().setKeyBindings('arrows')
-		.setCollision({ left: 40, top: 0, right: screenX + 20, bottom: screenY }, true)
 		.setAnimationStates({
 			// states
 			idle: 0,
@@ -59,24 +59,21 @@ loader.load((loader, resources) => {
 			hurting: [26, 27],
 			dying: [28, 32],
 			climbing: [33, 36]
-		}).getSprite();
+		});
 
-
-	pixi.animationSpeed = .25;
+pixi = pixiSprite.getSprite();
+pixiSprite.setCollision({ left: pixi.width - 20, top: 0, right: screenX + 20, bottom: screenY }, true)
+pixiSprite.setCollision({ left: pixi.width - 20, top: 0, right: screenX + 20, bottom: screenY }, true)
 
 	pixi.vx = 0;
 	pixi.vy = 0;
 	pixi.x = 100;
 	pixi.y = 300;
 
-
 	// //Left arrow key `press` method
 	pixi.key.left.press = () => {
 		if (!leftDirection) {
-			pixi.show(pixi.states.idle);
-			pixi.x = pixi.x + pixi.width;
-			pixi.width = -pixi.width;
-			leftDirection = true;
+			inverseX();
 		}
 
 		pixi.playAnimation(pixi.states.walking);
@@ -85,26 +82,6 @@ loader.load((loader, resources) => {
 	};
 	pixi.key.left.release = () => {
 		if (!pixi.key.right.isDown && pixi.vy === 0) {
-			pixi.vx = 0;
-			// pixi.show(pixi.states.idle);
-			pixi.playAnimation(pixi.states.idling);
-		}
-	};
-
-	//Right
-	pixi.key.right.press = () => {
-		if (leftDirection) {
-			pixi.x = pixi.x - pixi.width;
-			pixi.width = -pixi.width;
-			leftDirection = false;
-		}
-
-		pixi.playAnimation(pixi.states.walking);
-		pixi.vx = 10;
-		pixi.vy = 0;
-	};
-	pixi.key.right.release = () => {
-		if (!pixi.key.left.isDown && pixi.vy === 0) {
 			pixi.vx = 0;
 			// pixi.show(pixi.states.idle);
 			pixi.playAnimation(pixi.states.idling);
@@ -126,19 +103,50 @@ loader.load((loader, resources) => {
 		}
 	};
 
+		//Right
+	pixi.key.right.press = () => {
+		if (leftDirection) {
+			inverseX();
+		}
+
+		pixi.playAnimation(pixi.states.walking);
+		pixi.vx = 10;
+		pixi.vy = 0;
+	};
+	pixi.key.right.release = () => {
+		if (!pixi.key.left.isDown && pixi.vy === 0) {
+			pixi.vx = 0;
+			// pixi.show(pixi.states.idle);
+			pixi.playAnimation(pixi.states.idling);
+		}
+	};
+
 	//Down
 	pixi.key.down.press = () => {
+		pixi.vy = 0;
+		pixi.vx = 0;
 		pixi.show(pixi.states.idle);
 		pixi.playAnimation(pixi.states.ducking);
 
 	};
 	pixi.key.down.release = () => {
 		if (!pixi.key.up.isDown && pixi.vx === 0) {
-			pixi.vy = 0;
 			// pixi.show(pixi.states.idle);
 			pixi.playAnimation(pixi.states.idling);
 		}
 	};
+
+	ctrl.children[0].addEventListener('mousedown',()=> pixi.key.left.press())
+	ctrl.children[0].addEventListener('mouseup',()=> pixi.key.left.release())
+
+	ctrl.children[1].addEventListener('mousedown',()=> pixi.key.up.press())
+	ctrl.children[1].addEventListener('mouseup',()=> pixi.key.up.release())
+
+	ctrl.children[2].addEventListener('mousedown',()=> pixi.key.right.press())
+	ctrl.children[2].addEventListener('mouseup',()=> pixi.key.right.release())
+
+	ctrl.children[3].addEventListener('mousedown',()=> pixi.key.down.press())
+	ctrl.children[3].addEventListener('mouseup',()=> pixi.key.down.release())
 
 	pixi.playAnimation(pixi.states.idling);
 	stage.addChild(pixi);
@@ -159,6 +167,7 @@ function main() {
 		if (collision) {
 			//Reverse the sprite's `vx` value if it hits the left or right
 			if (collision.has("left")) {
+				// console.log(pixi);
 			}
 
 			if (collision.has("right")) {
@@ -173,10 +182,19 @@ function main() {
 	}
 }
 
+function inverseX () {
+	pixi.show(pixi.states.idle);
+	pixi.x = leftDirection ? pixi.x - pixi.width
+	: pixi.x + pixi.width;
+	pixi.width = -pixi.width;
+	leftDirection = !leftDirection;
+}
+
 btnPlay.addEventListener('click', () => loop.playAnimation())
 btnPause.addEventListener('click', () => loop.pauseAnimation())
 //responsive directives
 renderer.view.style.position = "absolute";
-renderer.view.style.top = "20%";
+renderer.view.style.top = "0";
+renderer.view.style.zIndex = 0;
 renderer.view.style.left = "50%";
 renderer.view.style.transform = "translate(-50%,0)";

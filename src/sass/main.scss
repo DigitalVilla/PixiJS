@@ -26,8 +26,56 @@ body {
 
 #testLog {
 	position: absolute;
-	font-weight:100;
+	font-weight: 100;
 	bottom: 10px;
 	left: 60%;
 	font-size: 12px;
+}
+
+.scene {
+	z-index: 0;
+}
+
+.controls {
+	$ctrlWidth: 60px;
+	$ctrlHeight: 30px;
+
+
+	position: absolute;
+	z-index: 10;
+	left: 15%;
+	top: 370px;
+	height: 100px;
+	width: 130px;
+
+	.ctrl {
+		position: absolute;
+		padding: 4px 10px;
+		height: $ctrlHeight;
+		width: $ctrlWidth;
+		border-radius: 20px;
+		opacity: .3;
+
+		&.rt {
+			right: 0;
+		}
+
+		&.dn {
+			bottom: 0;
+		}
+
+		&.rt,
+		&.lt {
+			top: 50%;
+			transform: translateY(-50%);
+		}
+
+		&.up,
+		&.dn {
+			left: 50%;
+			transform: translateX(-50%)
+		}
+
+	}
+
 }

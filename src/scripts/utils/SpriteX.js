@@ -344,7 +344,7 @@ export default class SpriteX {
 	}
 
 	//The contain helper function
-	setCollision(container) {
+	setCollision(container, inverseX) {
 		let sprite = this.sprite;
 
 
@@ -352,11 +352,17 @@ export default class SpriteX {
 		//boundaries with which the sprite is colliding
 		sprite.getCollision = function () {
 			let collision = new Set();
+			let keyL =sprite.key.left;
+			let keyR =sprite.key.right;
 
 			// X
 			if (sprite.x < container.left) {
-				sprite.x = container.left;
-				collision.add("left");
+				if (inverseX && (!keyL.isDown || (keyL.isDown && keyR.isDown))) {
+					// do not change
+				} else {
+					sprite.x = container.left;
+					collision.add("left");
+				}
 			}
 
 			// Y
@@ -367,8 +373,12 @@ export default class SpriteX {
 
 			// Width
 			if (sprite.x + sprite.width > container.right) {
-				sprite.x = container.right - sprite.width;
-				collision.add("right");
+				if (inverseX && (!keyR.isDown || (keyR.isDown && keyL.isDown))) {
+					// do not change
+				} else {
+					sprite.x = container.right - sprite.width;
+					collision.add("right");
+				}
 			}
 
 			// Height

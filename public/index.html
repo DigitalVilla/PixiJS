@@ -1,17 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <!-- <link rel="stylesheet" href="./assets/style.css"> -->
     <title>PixiJS</title>
 </head>
+
 <body>
-    <div id="scene"></div>
-    <div id="testLog"></div>
-	<button id="play" >Play</button>
-	<button id="pause" >Pause</button>
+    <div id="scene">
+        <button id="play">Play</button>
+        <button id="pause">Pause</button>
+
+        <div id="controls" class="controls">
+            <button class="ctrl lt">Left</button>
+            <button class="ctrl up">Up</button>
+            <button class="ctrl rt">Right</button>
+            <button class="ctrl dn">Down</button>
+        </div>
+    </div>
     <script src="./assets/bundle-min.js"></script>
 </body>
+
 </html>

@@ -37770,7 +37770,7 @@ function deprecation(version, message, ignoreDepth)
 
 exports = module.exports = __webpack_require__(/*! ../../node_modules/css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js")(false);
 // Module
-exports.push([module.i, "*,\n::after,\n::before {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n  outline: none; }\n\nhtml {\n  font-size: 62.5%;\n  max-width: 100vw;\n  min-width: 320px;\n  overflow: hidden; }\n\nbody {\n  color: #ffffff;\n  background: #000;\n  font: normal 125% / 1.4 sans-serif;\n  line-height: 1.6;\n  font-size: 1.6rem;\n  padding: 1rem;\n  padding: 0; }\n\n#testLog {\n  position: absolute;\n  font-weight: 100;\n  bottom: 10px;\n  left: 60%;\n  font-size: 12px; }\n", ""]);
+exports.push([module.i, "*,\n::after,\n::before {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n  outline: none; }\n\nhtml {\n  font-size: 62.5%;\n  max-width: 100vw;\n  min-width: 320px;\n  overflow: hidden; }\n\nbody {\n  color: #ffffff;\n  background: #000;\n  font: normal 125% / 1.4 sans-serif;\n  line-height: 1.6;\n  font-size: 1.6rem;\n  padding: 1rem;\n  padding: 0; }\n\n#testLog {\n  position: absolute;\n  font-weight: 100;\n  bottom: 10px;\n  left: 60%;\n  font-size: 12px; }\n\n.scene {\n  z-index: 0; }\n\n.controls {\n  position: absolute;\n  z-index: 10;\n  left: 15%;\n  top: 370px;\n  height: 100px;\n  width: 130px; }\n  .controls .ctrl {\n    position: absolute;\n    padding: 4px 10px;\n    height: 30px;\n    width: 60px;\n    border-radius: 20px;\n    opacity: .3; }\n    .controls .ctrl.rt {\n      right: 0; }\n    .controls .ctrl.dn {\n      bottom: 0; }\n    .controls .ctrl.rt, .controls .ctrl.lt {\n      top: 50%;\n      transform: translateY(-50%); }\n    .controls .ctrl.up, .controls .ctrl.dn {\n      left: 50%;\n      transform: translateX(-50%); }\n", ""]);
 
 
 /***/ }),
@@ -45884,9 +45884,13 @@ __webpack_require__.r(__webpack_exports__);
 var Container = pixi_js__WEBPACK_IMPORTED_MODULE_1__["Container"],
     autoRender = pixi_js__WEBPACK_IMPORTED_MODULE_1__["autoDetectRenderer"],
     Loader = pixi_js__WEBPACK_IMPORTED_MODULE_1__["Loader"],
-    scene = document.getElementById('scene'),
-    btnPlay = document.getElementById('play'),
-    btnPause = document.getElementById('pause'),
+    $ = function $(id) {
+  return document.getElementById(id);
+},
+    scene = $('scene'),
+    btnPlay = $('play'),
+    btnPause = $('pause'),
+    ctrl = $('controls'),
     screenX = 720,
     screenY = 480,
     stage = new Container(),
@@ -45897,6 +45901,7 @@ var Container = pixi_js__WEBPACK_IMPORTED_MODULE_1__["Container"],
   backgroundColor: 0xdddddd
 }); // initialize helper libraries
 
+
 var log = Object(_utils_logger__WEBPACK_IMPORTED_MODULE_2__["default"])('Index.JS: ');
 var anima = new _utils_Animate__WEBPACK_IMPORTED_MODULE_0__["default"]({
   PIXI: pixi_js__WEBPACK_IMPORTED_MODULE_1__,
@@ -45905,7 +45910,7 @@ var anima = new _utils_Animate__WEBPACK_IMPORTED_MODULE_0__["default"]({
 });
 var loop = anima.loop({
   update: main,
-  logicFps: 30
+  logicFps: 24
 });
 var spx = anima.spritex(); //game varaables
 
@@ -45916,15 +45921,10 @@ scene.appendChild(renderer.view);
 loader.add('tileset', "assets/tilesetAtlas.json").add('girl', "assets/girlAtlas.json");
 loader.load(function (loader, resources) {
   log('loader', 5);
-  pixi = spx.frameAtlas({
+  var pixiSprite = spx.frameAtlas({
     textures: resources.girl.textures,
     baseTexture: true
-  }).makeAnimatedSprite().addStatePlayer().setKeyBindings('arrows').setCollision({
-    left: 40,
-    top: 0,
-    right: screenX + 20,
-    bottom: screenY
-  }, true).setAnimationStates({
+  }).makeAnimatedSprite().addStatePlayer().setKeyBindings('arrows').setAnimationStates({
     // states
     idle: 0,
     dead: 32,
@@ -45940,8 +45940,20 @@ loader.load(function (loader, resources) {
     hurting: [26, 27],
     dying: [28, 32],
     climbing: [33, 36]
-  }).getSprite();
-  pixi.animationSpeed = .25;
+  });
+  pixi = pixiSprite.getSprite();
+  pixiSprite.setCollision({
+    left: pixi.width - 20,
+    top: 0,
+    right: screenX + 20,
+    bottom: screenY
+  }, true);
+  pixiSprite.setCollision({
+    left: pixi.width - 20,
+    top: 0,
+    right: screenX + 20,
+    bottom: screenY
+  }, true);
   pixi.vx = 0;
   pixi.vy = 0;
   pixi.x = 100;
@@ -45949,10 +45961,7 @@ loader.load(function (loader, resources) {
 
   pixi.key.left.press = function () {
     if (!leftDirection) {
-      pixi.show(pixi.states.idle);
-      pixi.x = pixi.x + pixi.width;
-      pixi.width = -pixi.width;
-      leftDirection = true;
+      inverseX();
     }
 
     pixi.playAnimation(pixi.states.walking);
@@ -45962,27 +45971,6 @@ loader.load(function (loader, resources) {
 
   pixi.key.left.release = function () {
     if (!pixi.key.right.isDown && pixi.vy === 0) {
-      pixi.vx = 0; // pixi.show(pixi.states.idle);
-
-      pixi.playAnimation(pixi.states.idling);
-    }
-  }; //Right
-
-
-  pixi.key.right.press = function () {
-    if (leftDirection) {
-      pixi.x = pixi.x - pixi.width;
-      pixi.width = -pixi.width;
-      leftDirection = false;
-    }
-
-    pixi.playAnimation(pixi.states.walking);
-    pixi.vx = 10;
-    pixi.vy = 0;
-  };
-
-  pixi.key.right.release = function () {
-    if (!pixi.key.left.isDown && pixi.vy === 0) {
       pixi.vx = 0; // pixi.show(pixi.states.idle);
 
       pixi.playAnimation(pixi.states.idling);
@@ -46003,22 +45991,66 @@ loader.load(function (loader, resources) {
 
       pixi.playAnimation(pixi.states.jumpingDown);
     }
+  }; //Right
+
+
+  pixi.key.right.press = function () {
+    if (leftDirection) {
+      inverseX();
+    }
+
+    pixi.playAnimation(pixi.states.walking);
+    pixi.vx = 10;
+    pixi.vy = 0;
+  };
+
+  pixi.key.right.release = function () {
+    if (!pixi.key.left.isDown && pixi.vy === 0) {
+      pixi.vx = 0; // pixi.show(pixi.states.idle);
+
+      pixi.playAnimation(pixi.states.idling);
+    }
   }; //Down
 
 
   pixi.key.down.press = function () {
+    pixi.vy = 0;
+    pixi.vx = 0;
     pixi.show(pixi.states.idle);
     pixi.playAnimation(pixi.states.ducking);
   };
 
   pixi.key.down.release = function () {
     if (!pixi.key.up.isDown && pixi.vx === 0) {
-      pixi.vy = 0; // pixi.show(pixi.states.idle);
-
+      // pixi.show(pixi.states.idle);
       pixi.playAnimation(pixi.states.idling);
     }
   };
 
+  ctrl.children[0].addEventListener('mousedown', function () {
+    return pixi.key.left.press();
+  });
+  ctrl.children[0].addEventListener('mouseup', function () {
+    return pixi.key.left.release();
+  });
+  ctrl.children[1].addEventListener('mousedown', function () {
+    return pixi.key.up.press();
+  });
+  ctrl.children[1].addEventListener('mouseup', function () {
+    return pixi.key.up.release();
+  });
+  ctrl.children[2].addEventListener('mousedown', function () {
+    return pixi.key.right.press();
+  });
+  ctrl.children[2].addEventListener('mouseup', function () {
+    return pixi.key.right.release();
+  });
+  ctrl.children[3].addEventListener('mousedown', function () {
+    return pixi.key.down.press();
+  });
+  ctrl.children[3].addEventListener('mouseup', function () {
+    return pixi.key.down.release();
+  });
   pixi.playAnimation(pixi.states.idling);
   stage.addChild(pixi);
   loop.animate();
@@ -46034,7 +46066,8 @@ function main() {
 
     if (collision) {
       //Reverse the sprite's `vx` value if it hits the left or right
-      if (collision.has("left")) {}
+      if (collision.has("left")) {// console.log(pixi);
+      }
 
       if (collision.has("right")) {}
 
@@ -46045,6 +46078,13 @@ function main() {
   }
 }
 
+function inverseX() {
+  pixi.show(pixi.states.idle);
+  pixi.x = leftDirection ? pixi.x - pixi.width : pixi.x + pixi.width;
+  pixi.width = -pixi.width;
+  leftDirection = !leftDirection;
+}
+
 btnPlay.addEventListener('click', function () {
   return loop.playAnimation();
 });
@@ -46053,7 +46093,8 @@ btnPause.addEventListener('click', function () {
 }); //responsive directives
 
 renderer.view.style.position = "absolute";
-renderer.view.style.top = "20%";
+renderer.view.style.top = "0";
+renderer.view.style.zIndex = 0;
 renderer.view.style.left = "50%";
 renderer.view.style.transform = "translate(-50%,0)";
 
@@ -46899,16 +46940,21 @@ function () {
 
   }, {
     key: "setCollision",
-    value: function setCollision(container) {
+    value: function setCollision(container, inverseX) {
       var sprite = this.sprite; //Create a set called `collision` to keep track of the
       //boundaries with which the sprite is colliding
 
       sprite.getCollision = function () {
-        var collision = new Set(); // X
+        var collision = new Set();
+        var keyL = sprite.key.left;
+        var keyR = sprite.key.right; // X
 
         if (sprite.x < container.left) {
-          sprite.x = container.left;
-          collision.add("left");
+          if (inverseX && (!keyL.isDown || keyL.isDown && keyR.isDown)) {// do not change
+          } else {
+            sprite.x = container.left;
+            collision.add("left");
+          }
         } // Y
 
 
@@ -46919,8 +46965,11 @@ function () {
 
 
         if (sprite.x + sprite.width > container.right) {
-          sprite.x = container.right - sprite.width;
-          collision.add("right");
+          if (inverseX && (!keyR.isDown || keyR.isDown && keyL.isDown)) {// do not change
+          } else {
+            sprite.x = container.right - sprite.width;
+            collision.add("right");
+          }
         } // Height
 
 
